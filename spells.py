@@ -59,6 +59,10 @@ def lumos():
         set_current_color(color)
         pixels.fill(color)
         time.sleep(duration / 256)
+
+    # Keep the lights on for 3 minutes
+    time.sleep(180)
+
     # If the lights are still on, run nox.
     if get_lights_state():
         nox()
