@@ -1,4 +1,3 @@
-#!/bin/python
 """
 This server handles the casting of "spells" that are identified by a separate,
 more powerful server used to identify said spells.  It also handles turning
@@ -11,7 +10,10 @@ import time
 import random
 import redis
 import json
+from config import potter_lamp_config as config
 
+# Define redis namespace
+redis_ns = config["redis_namespace"]
 
 # LED light strip setup
 pixels = neopixel.NeoPixel(board.D18, 60)
@@ -19,25 +21,25 @@ pixels.fill((0,0,0))
 
 # Use redis to track state of lights
 store = redis.Redis() # defaults for localhost will work just fine
-store.set('potter_lights', 'off')
+store.set(f'{redis_ns}:potter_lights', 'off')
 
 def set_current_color(color):
     """Set the current color of the lamp. (Used by Nox.)"""
-    store.set('potter_current_color', json.dumps(color))
+    store.set(f'{redis_ns}:potter_current_color', json.dumps(color))
 
 def get_current_color():
     """Get current color of the lamp."""
-    color = json.loads(store.get('potter_current_color').decode('utf-8'))
+    color = json.loads(store.get(f'{redis_ns}:potter_current_color').decode('utf-8'))
     return tuple(color)
 
 def get_lights_state():
     """Returns True is lights are on; False if off or turning off."""
-    return store.get('potter_lights').decode('utf-8') == 'on'
+    return store.get(f'{redis_ns}:potter_lights').decode('utf-8') == 'on'
 
 def set_lights_state(light_status):
     """Sets the state of 'potter_lights' to 'on' or 'off'."""
     status_text = 'on' if light_status else 'off'
-    store.set('potter_lights', status_text)
+    store.set(f'{redis_ns}:potter_lights', status_text)
     print(status_text)
     return status_text
 

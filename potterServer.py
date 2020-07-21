@@ -9,6 +9,7 @@ from flask import Flask
 import RPi.GPIO as GPIO
 
 from spells import lumos, nox, incendio
+from config import potter_lamp_config as config
 
 app = Flask(__name__)
 
@@ -50,5 +51,5 @@ def emitters_off():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
+    app.run(host=config['host'], port=config['port'], debug=True, threaded=True)
 
