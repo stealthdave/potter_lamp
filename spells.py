@@ -1,7 +1,7 @@
 """
-This server handles the casting of "spells" that are identified by a separate,
-more powerful server used to identify said spells.  It also handles turning
-on and off the IR emitters which can get hot if they're left on all the time.
+This server handles the casting of "spells" that are identified by a separate
+server used to identify said spells.  It also handles turning on and off the IR
+emitters which can get hot if they're left on all the time.
 """
 
 import board
@@ -12,14 +12,12 @@ import redis
 import json
 from config import potter_lamp_config as config
 
-# Define redis namespace
-redis_ns = config["redis_namespace"]
-
 # LED light strip setup
 pixels = neopixel.NeoPixel(board.D18, 60)
 pixels.fill((0,0,0))
 
 # Use redis to track state of lights
+redis_ns = config["redis_namespace"]
 store = redis.Redis() # defaults for localhost will work just fine
 store.set(f'{redis_ns}:potter_lights', 'off')
 
@@ -51,6 +49,7 @@ set_current_color((0,0,0))
 
 def lumos():
     """Lumos - light up the lantern."""
+    print('start lumos')
     duration = 3
     set_lights_state(True)
     for val in range(256):
@@ -68,7 +67,8 @@ def lumos():
     # If the lights are still on, run nox.
     if get_lights_state():
         nox()
-    return "lumos complete"
+    print("lumos complete")
+    return
 
 def nox():
     """Nox - turn off the light."""
@@ -83,7 +83,8 @@ def nox():
     # complete fade to black
     pixels.fill((0, 0, 0))
     set_current_color((0, 0, 0))
-    return "nox complete"
+    print("nox complete")
+    return
 
 def incendio():
     """Incendio - FIRE!!!"""
@@ -105,5 +106,29 @@ def incendio():
         time.sleep(interval)
         duration = duration - interval
     nox()
-    return "incendio complete"
+    print("incendio complete")
+    return
 
+def colovaria():
+    """Colovaria - lots of colors"""
+    duration = 300 # kaleidascope for 5 minutes
+    interval = 0.2 # change the color every 2/10s
+    set_lights_state(True)
+    while duration > 0 and get_lights_state():
+        current_color = get_current_color()
+        color = (random.randint(100, 255), random.randint(0, 40), 0)
+        #TODO: Make multiple colors
+        for val in range(10):
+            pixels.fill((
+                int(current_color[0] + ((color[0] - current_color[0]) * val / 10)),
+                int(current_color[1] + ((color[1] - current_color[1]) * val / 10)),
+                int(current_color[2] + ((color[2] - current_color[2]) * val / 10)),
+            ))
+            time.sleep(0.0125)
+        set_current_color(color)
+        pixels.fill(color)
+        time.sleep(interval)
+        duration = duration - interval
+    nox()
+    print("colovaria complete")
+    return

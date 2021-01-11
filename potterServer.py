@@ -7,9 +7,11 @@ on and off the IR emitters which can get hot if they're left on all the time.
 
 from flask import Flask
 import RPi.GPIO as GPIO
+import threading
 
-from spells import lumos, nox, incendio
+from spells import lumos, nox, incendio, colovaria
 from config import potter_lamp_config as config
+from wand import WatchSpellsOn, WatchSpellsOff
 
 app = Flask(__name__)
 
@@ -27,27 +29,44 @@ def index():
 
 @app.route('/spells/lumos')
 def cast_lumos():
-    return lumos()
-
-@app.route('/spells/nox')
-def cast_nox():
-    return nox()
+    spell = threading.Thread(target=lumos)
+    spell.start()
+    return "lumos on"
 
 @app.route('/spells/incendio')
 def cast_incendio():
-    return incendio()
+    spell = threading.Thread(target=incendio)
+    spell.start()
+    return "incendio on"
 
-@app.route('/emitters/on')
+@app.route('/spells/colovaria')
+def cast_colovaria():
+    spell = threading.Thread(target=colovaria)
+    spell.start()
+    return "colovaria on"
+
+@app.route('/spells/nox')
+def cast_nox():
+    spell = threading.Thread(target=nox)
+    spell.start()
+    return "nox on"
+
+@app.route('/wand/on')
 def emitters_on():
-    """Turn on IR LED emitters for wand detection."""
+    """Start watching for spells."""
+    # Turn on IR LED emitters for wand detection.
     GPIO.output(emitters_pin, GPIO.HIGH)
-    return "emitters on"
+    wand = threading.Thread(target=WatchSpellsOn)
+    wand.start()
+    return "wand on"
 
-@app.route('/emitters/off')
+@app.route('/wand/off')
 def emitters_off():
-    """Turn off IR LED emitters for wand detection."""
+    """Stop watching for spells."""
+    # Turn off IR LED emitters for wand detection.
     GPIO.output(emitters_pin, GPIO.LOW)
-    return "emitters off"
+    WatchSpellsOff()
+    return "wand off"
 
 
 if __name__ == '__main__':

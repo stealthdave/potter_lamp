@@ -18,7 +18,7 @@ The software setup assumes that you are running Raspberry Pi OS Debian Minimal (
 
 * Python 3 with Virtual Environments
 * OpenCV 3.2.0 with Python bindings
-* redis
+* redis (primarily for communcation between threads)
 
 ## Install Requirements
 
@@ -27,6 +27,10 @@ Run the following commands to install:
 ```
 sudo apt update && sudo apt -y upgrade
 sudo apt install python3-venv python3-opencv python3-pip redis
+sudo apt-get install libhdf5-dev libhdf5-serial-dev libhdf5-103
+sudo apt-get install libqtgui4 libqtwebkit4 libqt4-test python3-pyqt5
+sudo apt-get install libatlas-base-dev
+sudo apt-get install libjasper-dev
 ```
 
 ## Create Virtual Environment
@@ -54,4 +58,4 @@ Raspberry Potter - https://www.raspberrypotter.net/
 Other related tutorials and libraries:
 * https://learn.adafruit.com/neopixels-on-raspberry-pi/python-usage
 * https://circuitpython.readthedocs.io/projects/neopixel/en/latest/api.html
-
+* https://www.pyimagesearch.com/2018/09/19/pip-install-opencv/
