@@ -54,6 +54,22 @@ redis_ns = config["redis_namespace"]
 store = redis.Redis() # defaults for localhost will work just fine
 store.set(f'{redis_ns}:potter_lamp', 'off')
 
+# OpenCV Params
+debug_opencv = config["debug_opencv"]
+lk_params = dict( winSize  = (15,15),
+                  maxLevel = 2,
+                  criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
+blur_params = (4,4)
+dilation_params = (5, 5)
+movment_threshold = 80
+
+# start capturing
+if debug_opencv:
+    cv2.namedWindow("Raspberry Potter")
+cam = cv2.VideoCapture(-1)
+cam.set(3, 640)
+cam.set(4, 480)
+
 
 def IsGesture(a,b,c,d,i):
     print("point: %s" % i)
@@ -83,12 +99,6 @@ def FindWand():
     # Only run if lamp is turned on
     if store.get(f'{redis_ns}:potter_lamp').decode('utf-8') != 'on':
         return
-
-    # start capturing
-    cv2.namedWindow("Raspberry Potter")
-    cam = cv2.VideoCapture(-1)
-    cam.set(3, 640)
-    cam.set(4, 480)
 
     try:
         rval, old_frame = cam.read()
@@ -123,12 +133,6 @@ def FindWand():
 
 def TrackWand():
     global rval,old_frame,old_gray,p0,mask,color,ig,img,frame
-
-    # start capturing
-    cv2.namedWindow("Raspberry Potter")
-    cam = cv2.VideoCapture(-1)
-    cam.set(3, 640)
-    cam.set(4, 480)
 
     try:
         color = (0,0,255)
@@ -221,19 +225,24 @@ def TrackWand():
         except:
             e = sys.exc_info()[0]
             print("Tracking Error: %s" % e)
-        key = cv2.waitKey(20)
-        if key in [27, ord('Q'), ord('q')]: # exit on ESC
-            cv2.destroyAllWindows()
-            cam.release()
-            break
+        # This code is for opencv monitoring window
+        if debug_opencv:
+            key = cv2.waitKey(20)
+            if key in [27, ord('Q'), ord('q')]: # exit on ESC
+                cv2.destroyAllWindows()
+                cam.release()
+                break
     
     # Stop watching for spells
-    cv2.destroyAllWindows()
+    if debug_opencv:
+        cv2.destroyAllWindows()
     cam.release()
 
 def WatchSpellsOn():
     store.set(f'{redis_ns}:potter_lamp', 'on')
+    print("Find Wand")
     FindWand()
+    print("Begin Tracking Wand")
     TrackWand()
 
 def WatchSpellsOff():

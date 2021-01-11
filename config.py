@@ -9,4 +9,7 @@ potter_lamp_config = {
 
     # Redis
     'redis_namespace': 'potterlamp',
+
+    # OpenCV
+    'debug_opencv': False
 }
