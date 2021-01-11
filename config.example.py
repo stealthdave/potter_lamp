@@ -12,4 +12,8 @@ potter_lamp_config = {
 
     # OpenCV
     'debug_opencv': False, # requires desktop x11 server
+
+    # Spells
+    'watch_on_start': False,
+    'wand_timeout': 600,
 }

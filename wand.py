@@ -70,6 +70,8 @@ cam = cv2.VideoCapture(-1)
 cam.set(3, 640)
 cam.set(4, 480)
 
+##TODO: Turn off spells after no spells have been cast within a
+#       specified timeframe defined in config.
 
 def IsGesture(a,b,c,d,i):
     print("point: %s" % i)
@@ -239,6 +241,7 @@ def TrackWand():
     cam.release()
 
 def WatchSpellsOn():
+    """Start watching for spells."""
     store.set(f'{redis_ns}:potter_lamp', 'on')
     print("Find Wand")
     FindWand()
@@ -246,4 +249,5 @@ def WatchSpellsOn():
     TrackWand()
 
 def WatchSpellsOff():
+    """Stop watching for spells."""
     store.set(f'{redis_ns}:potter_lamp', 'off')

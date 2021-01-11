@@ -20,6 +20,7 @@ emitters_pin = 17
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
 GPIO.setup(emitters_pin, GPIO.OUT)
+GPIO.output(emitters_pin, GPIO.LOW) # default OFF
 
 
 @app.route('/')
@@ -78,6 +79,10 @@ def wand_off():
     WatchSpellsOff()
     return "wand off"
 
+
+if config['watch_on_start']:
+    print("Watch for spells autostarted.")
+    wand_on()
 
 if __name__ == '__main__':
     app.run(host=config['host'], port=config['port'], debug=True, threaded=True)
