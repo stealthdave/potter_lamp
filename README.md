@@ -1,5 +1,6 @@
 # Harry Potter Lamp
-Cast "spells" at a modified oil lamp powered by a Raspberry Pi 3 with NOIR camera and LED light strip for effects.
+Cast "spells" at a modified oil lamp powered by a Raspberry Pi 3 with NOIR 
+camera and LED light strip for effects.
 
 Hardware used:
 * Oil lamp (modified) https://www.amazon.com/gp/product/B000BQSFP0/
@@ -10,11 +11,19 @@ Hardware used:
 * 3.3V relay (to toggle IR LED lights) https://www.amazon.com/gp/product/B07XGZSYJV/
 * Wand from Ollivanders' Wand Shop (or other wand with IR reflective tip)
 
-My original intent was to use `APA102` LED lights as they had a lot of support for Raspberry Pi controls, particularly with Python, my current server-side language of choice.  However, the vendor that I purchased them from on eBay sent me a NeoPixel compatible set of LED lights instead.  This works, but at the expense of having to run the script as root due to the timing controls necessary for the NeoPixel.  Keep this in mind when choosing your login credentials for your Raspberry Pi.
+My original intent was to use `APA102` LED lights as they had a lot of support
+for Raspberry Pi controls, particularly with Python, my current server-side
+language of choice.  However, the vendor that I purchased them from on eBay
+sent me a NeoPixel compatible set of LED lights instead.  This works, but at
+the expense of having to run the script as root due to the timing controls
+necessary for the NeoPixel.  Keep this in mind when choosing your login
+credentials for your Raspberry Pi.
 
 # Software Installation
 
-The software setup assumes that you are running Raspberry Pi OS Debian Minimal (no desktop).  This implementation of the Harry Potter lamp requires the following software:
+The software setup assumes that you are running Raspberry Pi OS Debian Minimal
+(no desktop).  This implementation of the Harry Potter lamp requires the
+following software:
 
 * Python 3 with Virtual Environments
 * OpenCV 3.2.0 with Python bindings
@@ -43,17 +52,42 @@ python3 -m pip install -r requirements.txt
 ```
 
 ## Run the server
-Due to the requirements of the NeoPixels driver, the server _must_ be run as root!
+Copy the example config file.  The server should run with the example 
+unmodified, but you can change the port number, redis namespace and other
+settings here if desired.
+
+```
+cp config.example.py config.py
+```
+
+Due to the requirements of the NeoPixels driver, the server _must_ be run as 
+root!
 
 ```
 sudo ./lampvenv/bin/python3 potterServer.py
 ```
 
+## Call REST endpoints to watch for spells
+By default, the Potter Lamp script is _not_ watching for spells, and a REST 
+endpoint must be called in order to start.  The idea behind this is to have an
+easy way to start and stop the server.  The IR emitters alone use a lot of
+power and generate a fair amount of heat, making it unsafe to have them on all
+the time.  In my own use case, I use IFTTT to use an Alexa voice command to
+start the server. e.g., "Alexa, Let's cast some spells!"  Here are the
+currently available endpoints:
+
+* `/wand/on` - Start watching for spells.
+* `/wand/off` - Stop watching for spells.
+* `/emitters/on` - Turn on IR emitters independently of watching for spells.
+* `/emitters/off` - Turn off IR emitters.
+* `/spells/*` - Cast a "spell" manually, e.g. "lumos" or "nox"
+
+
 # Acknowledgements
 Inspired by many other Harry Potter Spell projects including:
 
 Adam Thole Smart Home Control Wand - https://www.adamthole.com/control-smart-home-with-magic-wand-video/
-Raspberry Potter - https://www.raspberrypotter.net/
+Raspberry Potter - https://www.raspberrypotter.net/ | https://github.com/sean-obrien/rpotter
 
 Other related tutorials and libraries:
 * https://learn.adafruit.com/neopixels-on-raspberry-pi/python-usage
