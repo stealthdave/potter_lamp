@@ -128,9 +128,8 @@ def FindWand():
             ig = [[0] for x in range(20)]
         print("finding...")
         threading.Timer(3, FindWand).start()
-    except:
-        e = sys.exc_info()[1]
-        print("Error: %s" % e)
+    except Exception as e:
+        print(f'Error: {e}')
         exit
 
 def TrackWand():
@@ -161,8 +160,8 @@ def TrackWand():
             p0.shape = (p0.shape[1], 1, p0.shape[2])
             p0 = p0[:,:,0:2]
             mask = np.zeros_like(old_frame)
-    except:
-        print("No points found")
+    except Exception as e:
+        print(f'No points found - {e}')
     # Create a mask image for drawing purposes
 
     while store.get(f'{redis_ns}:potter_lamp').decode('utf-8') == 'on':
@@ -214,7 +213,8 @@ def TrackWand():
 
                 cv2.putText(img, "Press ESC to close.", (5, 25),
                     cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255,255,255))
-            cv2.imshow("Raspberry Potter", frame)
+            if debug_opencv:
+                cv2.imshow("Raspberry Potter", frame)
 
             # get next frame
             rval, frame = cam.read()
@@ -224,15 +224,15 @@ def TrackWand():
             p0 = good_new.reshape(-1,1,2)
         except IndexError:
             print("Index error - Tracking")
-        except:
-            e = sys.exc_info()[0]
-            print("Tracking Error: %s" % e)
+        except Exception as e:
+            print(f'Tracking Error: {e}')
         # This code is for opencv monitoring window
         if debug_opencv:
             key = cv2.waitKey(20)
             if key in [27, ord('Q'), ord('q')]: # exit on ESC
                 cv2.destroyAllWindows()
                 cam.release()
+                store.set(f'{redis_ns}:potter_lamp', 'off')
                 break
     
     # Stop watching for spells
@@ -243,6 +243,8 @@ def TrackWand():
 def WatchSpellsOn():
     """Start watching for spells."""
     store.set(f'{redis_ns}:potter_lamp', 'on')
+    # Light up for 5s to let the Wizard know you're ready
+    lumos(0)
     print("Find Wand")
     FindWand()
     print("Begin Tracking Wand")

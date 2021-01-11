@@ -47,7 +47,7 @@ set_current_color((0,0,0))
 
 # SPELLS
 
-def lumos():
+def lumos(lamp_duration=180):
     """Lumos - light up the lantern."""
     print('start lumos')
     duration = 3
@@ -61,8 +61,8 @@ def lumos():
         pixels.fill(color)
         time.sleep(duration / 256)
 
-    # Keep the lights on for 3 minutes
-    time.sleep(180)
+    # Keep the lights on (default 3 minutes)
+    time.sleep(lamp_duration)
 
     # If the lights are still on, run nox.
     if get_lights_state():
@@ -86,9 +86,9 @@ def nox():
     print("nox complete")
     return
 
-def incendio():
+def incendio(lamp_duration=300):
     """Incendio - FIRE!!!"""
-    duration = 300 # burn for 5 minutes
+    duration = lamp_duration # burn for 5 minutes by default
     interval = 0.1 # change the flame every 1/10s
     set_lights_state(True)
     while duration > 0 and get_lights_state():
@@ -109,9 +109,9 @@ def incendio():
     print("incendio complete")
     return
 
-def colovaria():
+def colovaria(lamp_duration=300):
     """Colovaria - lots of colors"""
-    duration = 300 # kaleidascope for 5 minutes
+    duration = lamp_duration # kaleidascope for 5 minutes by default
     interval = 0.2 # change the color every 2/10s
     set_lights_state(True)
     while duration > 0 and get_lights_state():
