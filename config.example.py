@@ -11,5 +11,5 @@ potter_lamp_config = {
     'redis_namespace': 'potterlamp',
 
     # OpenCV
-    'debug_opencv': False
+    'debug_opencv': False, # requires desktop x11 server
 }
