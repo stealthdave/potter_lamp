@@ -51,8 +51,18 @@ def cast_nox():
     spell.start()
     return "nox on"
 
-@app.route('/wand/on')
+@app.route('/emitters/on')
 def emitters_on():
+    # Turn on IR LED emitters.
+    GPIO.output(emitters_pin, GPIO.HIGH)
+
+@app.route('/emitters/off')
+def emitters_off():
+    # Turn off IR LED emitters.
+    GPIO.output(emitters_pin, GPIO.LOW)
+
+@app.route('/wand/on')
+def wand_on():
     """Start watching for spells."""
     # Turn on IR LED emitters for wand detection.
     GPIO.output(emitters_pin, GPIO.HIGH)
@@ -61,7 +71,7 @@ def emitters_on():
     return "wand on"
 
 @app.route('/wand/off')
-def emitters_off():
+def wand_off():
     """Stop watching for spells."""
     # Turn off IR LED emitters for wand detection.
     GPIO.output(emitters_pin, GPIO.LOW)
