@@ -16,4 +16,7 @@ potter_lamp_config = {
     # Spells
     'watch_on_start': False,
     'wand_timeout': 600,
+
+    # IR Emitters
+    'emitters_pin': 17,
 }

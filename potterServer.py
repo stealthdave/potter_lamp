@@ -6,21 +6,14 @@ on and off the IR emitters which can get hot if they're left on all the time.
 """
 
 from flask import Flask
-import RPi.GPIO as GPIO
 import threading
 
 from spells import lumos, nox, incendio, colovaria
 from config import potter_lamp_config as config
 from wand import WatchSpellsOn, WatchSpellsOff
+from emitters import set_emitters
 
 app = Flask(__name__)
-
-# IR LED emitters control
-emitters_pin = 17
-GPIO.setmode(GPIO.BCM)
-GPIO.setwarnings(False)
-GPIO.setup(emitters_pin, GPIO.OUT)
-GPIO.output(emitters_pin, GPIO.LOW) # default OFF
 
 
 @app.route('/')
@@ -55,18 +48,20 @@ def cast_nox():
 @app.route('/emitters/on')
 def emitters_on():
     # Turn on IR LED emitters.
-    GPIO.output(emitters_pin, GPIO.HIGH)
+    set_emitters(True)
+    return "ir emitters on"
 
 @app.route('/emitters/off')
 def emitters_off():
     # Turn off IR LED emitters.
-    GPIO.output(emitters_pin, GPIO.LOW)
+    set_emitters(False)
+    return "ir emitters off"
 
 @app.route('/wand/on')
 def wand_on():
     """Start watching for spells."""
     # Turn on IR LED emitters for wand detection.
-    GPIO.output(emitters_pin, GPIO.HIGH)
+    set_emitters(True)
     wand = threading.Thread(target=WatchSpellsOn)
     wand.start()
     return "wand on"
@@ -75,7 +70,7 @@ def wand_on():
 def wand_off():
     """Stop watching for spells."""
     # Turn off IR LED emitters for wand detection.
-    GPIO.output(emitters_pin, GPIO.LOW)
+    set_emitters(False)
     WatchSpellsOff()
     return "wand off"
 
