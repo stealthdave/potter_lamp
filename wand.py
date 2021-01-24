@@ -98,9 +98,6 @@ def IsGesture(a,b,c,d,i):
 
 def FindWand():
     global rval,old_frame,old_gray,p0,mask,color,ig,img,frame
-    # Only run if lamp is turned on
-    if store.get(f'{redis_ns}:potter_lamp').decode('utf-8') != 'on':
-        return
 
     try:
         rval, old_frame = cam.read()
@@ -126,8 +123,10 @@ def FindWand():
             p0 = p0[:,:,0:2]
             mask = np.zeros_like(old_frame)
             ig = [[0] for x in range(20)]
-        print("finding...")
-        threading.Timer(3, FindWand).start()
+        # Continue if lamp is turned on
+        if store.get(f'{redis_ns}:potter_lamp').decode('utf-8') == 'on':
+            print("finding...")
+            threading.Timer(3, FindWand).start()
     except Exception as e:
         print(f'Error: {e}')
         exit
@@ -167,6 +166,7 @@ def TrackWand():
     while store.get(f'{redis_ns}:potter_lamp').decode('utf-8') == 'on':
         try:
             rval, frame = cam.read()
+            frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             cv2.flip(frame,1,frame)
             if p0 is not None:
                 frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -221,7 +221,8 @@ def TrackWand():
 
             # Now update the previous frame and previous points
             old_gray = frame_gray.copy()
-            p0 = good_new.reshape(-1,1,2)
+            if good_new:
+                p0 = good_new.reshape(-1,1,2)
         except IndexError:
             print("Index error - Tracking")
         except Exception as e:
