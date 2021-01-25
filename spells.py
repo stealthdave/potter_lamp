@@ -10,6 +10,7 @@ import time
 import random
 import redis
 import json
+import threading
 from config import potter_lamp_config as config
 
 # LED light strip setup
@@ -132,3 +133,18 @@ def colovaria(lamp_duration=300):
     nox()
     print("colovaria complete")
     return
+
+def cast_spell(spell):
+    cast = None
+    if spell == 'lumos':
+        cast = threading.Thread(target=lumos)
+    elif spell == 'nox':
+        cast = threading.Thread(target=nox)
+    elif spell == 'incendio':
+        cast = threading.Thread(target=incendio)
+    elif spell == 'colovaria':
+        cast = threading.Thread(target=colovaria)
+    if cast is not None:
+        cast.start()
+    
+    return cast

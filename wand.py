@@ -47,7 +47,7 @@ import time
 import warnings
 import redis
 from config import potter_lamp_config as config
-from spells import lumos, nox, incendio, colovaria
+from spells import cast_spell, lumos
 
 # Use redis to track state of lamp
 redis_ns = config["redis_namespace"]
@@ -87,13 +87,13 @@ def IsGesture(a,b,c,d,i):
     #check for gesture patterns in array
     astr = ''.join(map(str, ig[i]))
     if "rightup" in astr:
-        lumos()
+        cast_spell('lumos')
     elif "rightdown" in astr:
-        nox()
+        cast_spell('nox')
     elif "leftdown" in astr:
-        colovaria()
+        cast_spell('colovaria')
     elif "leftup" in astr:
-        incendio()
+        cast_spell('incendio')
     print(astr)
 
 def FindWand():
@@ -163,9 +163,13 @@ def TrackWand():
         print(f'No points found - {e}')
     # Create a mask image for drawing purposes
 
+    good_new = None
+
     while store.get(f'{redis_ns}:potter_lamp').decode('utf-8') == 'on':
         try:
             rval, frame = cam.read()
+            if not frame:
+                continue
             frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             cv2.flip(frame,1,frame)
             if p0 is not None:
@@ -221,7 +225,7 @@ def TrackWand():
 
             # Now update the previous frame and previous points
             old_gray = frame_gray.copy()
-            if good_new:
+            if good_new is not None:
                 p0 = good_new.reshape(-1,1,2)
         except IndexError:
             print("Index error - Tracking")
