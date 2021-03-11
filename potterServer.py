@@ -61,7 +61,7 @@ def emitters_off():
 def wand_on():
     """Start watching for spells."""
     # Turn on IR LED emitters for wand detection.
-    set_emitters(True)
+    # set_emitters(True)
     wand = threading.Thread(target=WatchSpellsOn)
     wand.start()
     return "wand on"
