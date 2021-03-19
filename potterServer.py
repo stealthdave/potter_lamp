@@ -60,8 +60,6 @@ def emitters_off():
 @app.route('/wand/on')
 def wand_on():
     """Start watching for spells."""
-    # Turn on IR LED emitters for wand detection.
-    # set_emitters(True)
     wand = threading.Thread(target=WatchSpellsOn)
     wand.start()
     return "wand on"
@@ -69,8 +67,6 @@ def wand_on():
 @app.route('/wand/off')
 def wand_off():
     """Stop watching for spells."""
-    # Turn off IR LED emitters for wand detection.
-    set_emitters(False)
     WatchSpellsOff()
     return "wand off"
 
@@ -80,5 +76,5 @@ if config['watch_on_start']:
     wand_on()
 
 if __name__ == '__main__':
-    app.run(host=config['host'], port=config['port'], debug=True, threaded=True)
+    app.run(host=config['host'], port=config['port'], debug=False, threaded=True)
 
