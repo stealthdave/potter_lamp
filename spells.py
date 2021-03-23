@@ -117,7 +117,11 @@ def colovaria(lamp_duration=300):
     set_lights_state(True)
     while duration > 0 and get_lights_state():
         current_color = get_current_color()
-        color = (random.randint(100, 255), random.randint(0, 40), 0)
+        color = (
+            random.randint(20, 255),
+            random.randint(20, 255),
+            random.randint(20, 255)
+        )
         #TODO: Make multiple colors
         for val in range(10):
             pixels.fill((
