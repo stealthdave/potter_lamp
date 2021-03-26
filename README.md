@@ -12,8 +12,8 @@ Hardware used:
 * Raspberry Pi 3B https://www.amazon.com/gp/product/B01CD5VC92/
 * NeoPixel LED Light Strip (for lighting effects)
 * NOIR 8MP Camera with IR pass filter https://www.amazon.com/gp/product/B01ER2SMHY/
-* IR LED lights https://www.amazon.com/gp/product/B07FM6LL3V/
-* 3.3V relay (to toggle IR LED lights) https://www.amazon.com/gp/product/B07XGZSYJV/
+* Super Bright IR LEDs https://www.amazon.com/gp/product/B00ULB0U44/
+* 2N2222 Transistor and resistors to control IR LEDs with GPIO
 * Wand from Ollivanders' Wand Shop (or other wand with IR reflective tip)
 
 My original intent was to use `APA102` LED lights as they had a lot of support
