@@ -2,6 +2,11 @@
 Cast "spells" at a modified oil lamp powered by a Raspberry Pi 3 with NOIR 
 camera and LED light strip for effects.
 
+# THIS IS A WORK IN PROGRESS!!!
+Parts of the system work, but the wand tracking system does not... yet.
+Spells can be "cast" and lighting effects triggered via API calls.  Wand
+tracking can be turned on and off via API calls, as can the IR emitters.
+
 Hardware used:
 * Oil lamp (modified) https://www.amazon.com/gp/product/B000BQSFP0/
 * Raspberry Pi 3B https://www.amazon.com/gp/product/B01CD5VC92/
