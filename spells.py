@@ -48,7 +48,7 @@ set_current_color((0,0,0))
 
 # SPELLS
 
-def lumos(lamp_duration=180):
+def lumos(lamp_duration=180, start_color=(255, 255, 255)):
     """Lumos - light up the lantern."""
     print('start lumos')
     duration = 3
@@ -57,7 +57,9 @@ def lumos(lamp_duration=180):
         # if someone casts "Nox", stop turning on lights
         if not get_lights_state():
             break
-        color = (val, val, val)
+        color = (val * start_color[0] / 256,
+                 val * start_color[1] / 256,
+                 val * start_color[2] / 256)
         set_current_color(color)
         pixels.fill(color)
         time.sleep(duration / 256)
@@ -101,7 +103,7 @@ def incendio(lamp_duration=300):
                 int(current_color[1] + ((color[1] - current_color[1]) * val / 10)),
                 int(current_color[2] + ((color[2] - current_color[2]) * val / 10)),
             ))
-            time.sleep(0.0125)
+            time.sleep(0.003)
         set_current_color(color)
         pixels.fill(color)
         time.sleep(interval)
@@ -129,7 +131,7 @@ def colovaria(lamp_duration=300):
                 int(current_color[1] + ((color[1] - current_color[1]) * val / 10)),
                 int(current_color[2] + ((color[2] - current_color[2]) * val / 10)),
             ))
-            time.sleep(0.0125)
+            time.sleep(0.003)
         set_current_color(color)
         pixels.fill(color)
         time.sleep(interval)
