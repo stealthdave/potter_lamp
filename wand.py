@@ -96,7 +96,7 @@ def StartCamera():
     #     End()
 
 
-def IsGesture(a,b,c,d,i):
+def IsGesture(a,b,c,d,i,ig):
     """
     Determines if the point has moved.
     """
@@ -133,6 +133,7 @@ def IsGesture(a,b,c,d,i):
     elif "leftdown" in astr:
         cast_spell('colovaria')
     print(f'Spell string: {astr}')
+    return ig
 
 
 def FindWand():
@@ -219,7 +220,7 @@ def TrackWand():
                     c,d = old.ravel()
                     # only try to detect gesture on highly-rated points (below 10)
                     if (i<15):
-                        IsGesture(a,b,c,d,i)
+                        ig = IsGesture(a,b,c,d,i,ig)
                     dist = math.hypot(a - c, b - d)
                     if (dist<movment_threshold):
                         cv2.line(mask, (a,b),(c,d),(0,255,0), 2)
