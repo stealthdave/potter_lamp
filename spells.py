@@ -53,7 +53,7 @@ def lumos(lamp_duration=180, start_color=(255, 255, 255)):
     print('start lumos')
     duration = 3
     set_lights_state(True)
-    for val in range(256):
+    for val in range(0, 255, 4):
         # if someone casts "Nox", stop turning on lights
         if not get_lights_state():
             break
@@ -77,10 +77,10 @@ def nox():
     """Nox - turn off the light."""
     set_lights_state(False)
     color = get_current_color()
-    for val in range(64):
-        pr = int((255 - val * 4) / 256 * color[0])
-        pg = int((255 - val * 4) / 256 * color[1])
-        pb = int((255 - val * 4) / 256 * color[2])
+    for val in range(0, 255, 4):
+        pr = int((255 - val) / 256 * color[0])
+        pg = int((255 - val) / 256 * color[1])
+        pb = int((255 - val) / 256 * color[2])
         pixels.fill((pr, pg, pb))
         time.sleep(0.001)
     # complete fade to black
