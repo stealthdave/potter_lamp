@@ -35,7 +35,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-import io
 import numpy as np
 import cv2
 import picamera
@@ -53,7 +52,6 @@ from emitters import set_emitters
 # Set global variables
 debug_opencv = config["debug_opencv"]
 cam = None
-stream = io.BytesIO()
 
 # Use redis to track state of lamp
 redis_ns = config["redis_namespace"]
@@ -78,7 +76,7 @@ movment_threshold = 80
 
 def StartCamera():
     """Initialize camera input."""
-    global cam, debug_opencv, stream
+    global cam, debug_opencv
     # Start IR emitter
     LampState('on')
     # Open a window for debug
@@ -142,7 +140,7 @@ def FindWand():
     FindWand is called to find all potential wands in a scene.  These are then 
     tracked as points for movement.  The scene is reset every 3 seconds.
     """
-    global rval,old_frame,old_gray,p0,mask,color,ig,img,frame
+    global rval,old_frame,old_gray,p0,mask,color,ig
     try:
         rval, old_frame = cam.read()
         cv2.flip(old_frame,1,old_frame)
@@ -226,15 +224,11 @@ def TrackWand():
                     if (dist<movment_threshold):
                         cv2.line(mask, (a,b),(c,d),(0,255,0), 2)
                     cv2.circle(frame,(a,b),5,color,-1)
-                    if debug_opencv:
-                        cv2.putText(frame, str(i), (a,b), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,0,255)) 
+                    cv2.putText(frame, str(i), (a,b), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,0,255)) 
                 img = cv2.add(frame,mask)
                 # save for debug
                 print('Save test image')
                 cv2.imwrite('test.jpg', img)
-                if debug_opencv:
-                    cv2.putText(img, "Press ESC to close.", (5, 25),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255,255,255))
 
             if debug_opencv:
                 cv2.imshow("Raspberry Potter", frame)
@@ -250,37 +244,6 @@ def TrackWand():
         except Exception as error:
             e = sys.exc_info()[0]
             print("Tracking Error: %s" % e)
-
-
-def CaptureStill():
-    """Capture still image to analyze."""
-    # Grab image
-    frame = cam.capture(stream, format='jpeg')
-
-    # Isolate reflective tip
-    stream.seek(0)
-    data2 = np.fromstring(stream.getvalue(), dtype=np.uint8)
-    frame = cv2.imdecode(data2, 1)
-    # cv2.flip(frame,1,frame)
-    frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-    # save for debug
-    cv2.imwrite('test.jpg', frame)
-
-    # just once for now
-    WatchSpellsOff()
-    return frame
-
-def TrackMotion():
-    """Compare images for motion."""
-    print('start tracking')
-    while LampState():
-        frame = CaptureStill()
-        print('image saved?')
-        if frame is None:
-            break
-        
-    pass
 
 def End():
     global cam
