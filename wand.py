@@ -38,7 +38,6 @@ SOFTWARE.
 import numpy as np
 import cv2
 import picamera
-import threading
 import sys
 import math
 import time
@@ -51,7 +50,6 @@ from emitters import set_emitters
 
 # Set global variables
 debug_opencv = config["debug_opencv"]
-cam = None
 
 # Use redis to track state of lamp
 redis_ns = config["redis_namespace"]
@@ -61,8 +59,13 @@ def LampState(set=None):
     """Retrieve or set lamp state."""
     if set in ['on', 'off']:
         store.set(f'{redis_ns}:potter_lamp', set)
-        set_emitters(set == 'on')
-    return store.get(f'{redis_ns}:potter_lamp').decode('utf-8') == 'on'
+        lamp_state = set == 'on'
+        set_emitters(lamp_state)
+    else:
+        lamp_state = store.get(f'{redis_ns}:potter_lamp').decode('utf-8') == 'on'
+
+    print(f'Lamp State: {lamp_state}')
+    return lamp_state
 
 # Set default lamp state
 LampState('off')
@@ -76,9 +79,6 @@ movment_threshold = 80
 
 def StartCamera():
     """Initialize camera input."""
-    global cam, debug_opencv
-    # Start IR emitter
-    LampState('on')
     # Open a window for debug
     if debug_opencv:
         cv2.namedWindow("Raspberry Potter")
@@ -87,13 +87,10 @@ def StartCamera():
         cam = cv2.VideoCapture(0)
         cam.set(3, 640)
         cam.set(4, 480)
+        print('Camera started')
+        return cam
     except Exception as camera:
         print('Camera already open')
-    # try:
-    #     while LampState():
-    #         FindNewPoints()
-    # finally:
-    #     End()
 
 
 def IsGesture(a,b,c,d,i,ig):
@@ -136,12 +133,19 @@ def IsGesture(a,b,c,d,i,ig):
     return ig
 
 
-def FindWand():
+def FindWand(cam,
+             rval=None,
+             old_frame=None,
+             old_gray=None,
+             p0=None,
+             mask=None,
+             color=None,
+             ig=None):
     """
     FindWand is called to find all potential wands in a scene.  These are then 
     tracked as points for movement.  The scene is reset every 3 seconds.
     """
-    global rval,old_frame,old_gray,p0,mask,color,ig
+
     try:
         rval, old_frame = cam.read()
         cv2.flip(old_frame,1,old_frame)
@@ -159,20 +163,30 @@ def FindWand():
             p0 = p0[:,:,0:2]
             mask = np.zeros_like(old_frame)
             ig = [[0] for x in range(20)]
-        if LampState():
-            print("finding...")
-            threading.Timer(3, FindWand).start()
+
     except Exception as e:
         print(f'Error: {e}')
-        End()
+        End(cam)
         exit
+    
+    print("finding...")
+    return rval,old_frame,old_gray,p0,mask,color,ig
 
 
 def TrackWand():
     """
     Tracks wand points for 3 seconds.
     """
-    global rval,old_frame,old_gray,p0,mask,color,ig,img,frame
+    cam = StartCamera()
+    if not cam:
+        print('=== NO CAMERA FOUND ===')
+        exit()
+
+    rval,old_frame,old_gray,p0,mask,color,ig = FindWand(cam)
+    # Loop every 3 seconds until a wand is found
+    while rval is None:
+        time.sleep(3)
+        rval,old_frame,old_gray,p0,mask,color,ig = FindWand(cam)
     try:
         color = (0,0,255)
         rval, old_frame = cam.read()
@@ -194,6 +208,7 @@ def TrackWand():
     except Exception as e:
         print("No points found")
     # Create a mask image for drawing purposes
+    find_wand_timer = time.time() + 3
     while LampState():
         try:
             rval, frame = cam.read()
@@ -245,9 +260,16 @@ def TrackWand():
         except Exception as error:
             e = sys.exc_info()[0]
             print("Tracking Error: %s" % e)
+        
+        # Scene resets every 3 seconds
+        if time.time() > find_wand_timer:
+            rval,old_frame,old_gray,p0,mask,color,ig = FindWand(cam,rval,old_frame,old_gray,p0,mask,color,ig)
+            find_wand_timer = time.time() + 3
+    
+    # The End
+    End(cam)
 
-def End():
-    global cam
+def End(cam):
     # Stop IR emitter
     LampState('off')
     print('=== END ===')
@@ -260,9 +282,6 @@ def WatchSpellsOn():
     LampState('on')
     # Light up for 5s to let the Wizard know you're ready
     lumos(0)
-    # start capturing
-    StartCamera()
-    FindWand()
     # track wand
     print("Begin Tracking Wand")
     TrackWand()
@@ -270,6 +289,5 @@ def WatchSpellsOn():
 def WatchSpellsOff():
     """Stop watching for spells."""
     LampState('off')
-    End()
     # Light up for 5s to let the Wizard know you're done
     lumos(0, (127, 10, 10))

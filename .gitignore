@@ -2,3 +2,4 @@ lampvenv
 __pycache__
 config.py
 *.pyc
+test.jpg
