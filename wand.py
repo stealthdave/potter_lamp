@@ -98,38 +98,40 @@ def IsGesture(a,b,c,d,i,ig):
     Determines if the point has moved.
     """
 
-    print("point: %s" % i)
     #look for basic movements - TODO: trained gestures
     if ((a<(c-5))&(abs(b-d)<2)):
-        ig[i].append("left")
+        ig[i].append("!left")
     elif ((c<(a-5))&(abs(b-d)<2)):
-        ig[i].append("right")
+        ig[i].append("!right")
     elif ((b<(d-5))&(abs(a-c)<5)):
-        ig[i].append("up")
+        ig[i].append("!up")
     elif ((d<(b-5))&(abs(a-c)<5)):
-        ig[i].append("down")
+        ig[i].append("!down")
     #these are for moving diagnally
-	# #Angle Down Left = ADL
-    # elif (((b-d)/(c-a))>0.9):
-	#     ig[i].append("ADL")
-	# #Angle Down Right = ADR
-    # elif (((b-d)/(a-c))>0.9):
-	#     ig[i].append("ADR")
-	# #Angle Up Right = AUR
-    # elif (((d-b)/(a-c))>0.9):
-	#     ig[i].append("AUR")
+	#Angle Down Left = ADL
+    elif (((b-d)/(c-a))>0.9):
+	    ig[i].append("!ADL")
+	#Angle Down Right = ADR
+    elif (((b-d)/(a-c))>0.9):
+	    ig[i].append("!ADR")
+	#Angle Up Right = AUR
+    elif (((d-b)/(a-c))>0.9):
+	    ig[i].append("!AUR")
     # PART 5B 
     #check for gesture patterns in array
     astr = ''.join(map(str, ig[i]))
-    if "rightup" in astr:
+    if "!right!up" in astr:
         cast_spell('lumos')
-    elif "rightdown" in astr:
+    elif "!right!down" in astr:
         cast_spell('nox')
-    elif "leftup" in astr:
+    elif "!left!up" in astr:
         cast_spell('incendio')
-    elif "leftdown" in astr:
+    elif "!left!down" in astr:
         cast_spell('colovaria')
-    print(f'Spell string: {astr}')
+
+    if "!" in astr:
+        print(f'Spell cast for point {i} string: {astr}')
+
     return ig
 
 
@@ -243,7 +245,6 @@ def TrackWand():
                     cv2.putText(frame, str(i), (a,b), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,0,255)) 
                 img = cv2.add(frame,mask)
                 # save for debug
-                print('Save test image')
                 cv2.imwrite('test.jpg', img)
 
             if debug_opencv:
