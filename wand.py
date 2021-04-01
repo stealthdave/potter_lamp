@@ -75,7 +75,9 @@ lk_params = dict( winSize  = (15,15),
                   maxLevel = 2,
                   criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 dilation_params = (5, 5)
-movment_threshold = 80
+movement_threshold = 50
+static_threshold = 20
+scene_duration = 5
 rotate_camera = config['rotate_camera']
 
 # Spells
@@ -111,17 +113,17 @@ def IsGesture(newX,newY,oldX,oldY,i,ig):
     #look for basic movements - TODO: trained gestures
     moveX = newX - oldX
     moveY = newY - oldY
-    if moveX > 20 and abs(moveY) < 5:
+    if moveX > movement_threshold and abs(moveY) < static_threshold:
         ig[i].append("!right")
-    elif moveX < -20 and abs(moveY) < 5:
+    elif moveX < (0 - movement_threshold) and abs(moveY) < static_threshold:
         ig[i].append("!left")
-    elif moveY > 20 and abs(moveX) < 5:
+    elif moveY > movement_threshold and abs(moveX) < static_threshold:
         ig[i].append("!up")
-    elif moveY < -20 and abs(moveX) < 5:
+    elif moveY < (0 - movement_threshold) and abs(moveX) < static_threshold:
         ig[i].append("!down")
     #these are for moving diagnally
     # Check diagonals
-    if 0.9 < abs(moveX/moveY) < 1.1 and abs(moveX) > 20:
+    if 0.9 < abs(moveX/moveY) < 1.1 and abs(moveX) > movement_threshold:
         if moveX < 0 and moveY < 0:
             ig[i].append("!ADL") # Down-Left
         if moveX > 0 and moveY < 0:
@@ -135,7 +137,7 @@ def IsGesture(newX,newY,oldX,oldY,i,ig):
     #check for gesture patterns in array
     astr = ''.join(map(str, ig[i]))
 
-    if abs(moveX) > 20 or abs(moveY) > 20:
+    if abs(moveX) > movement_threshold or abs(moveY) > movement_threshold:
         print(f'-> movement: x={int(moveX * 100) / 100}, y={int(moveY * 100) / 100}')
         print(f'    -> {astr}')
 
@@ -159,7 +161,7 @@ def FindWand(cam,
              ig=None):
     """
     FindWand is called to find all potential wands in a scene.  These are then 
-    tracked as points for movement.  The scene is reset every 3 seconds.
+    tracked as points for movement.  The scene is reset based on scene_duration.
     """
 
     try:
@@ -193,7 +195,7 @@ def FindWand(cam,
 
 def TrackWand():
     """
-    Tracks wand points for 3 seconds.
+    Tracks wand points for `scene_duration` seconds.
     """
     wand_timeout = config["wand_timeout"]
     cam = StartCamera()
@@ -204,9 +206,9 @@ def TrackWand():
 
     wand_timer = time.time() + wand_timeout
     rval,old_frame,old_gray,p0,mask,color,ig = FindWand(cam)
-    # Loop every 3 seconds until a wand is found
+    # Loop every `scene_duration` seconds until a wand is found
     while rval is None and time.time() < wand_timer:
-        time.sleep(3)
+        time.sleep(scene_duration)
         rval,old_frame,old_gray,p0,mask,color,ig = FindWand(cam)
 
     # check if we've started the scene successfully within timeout
@@ -238,7 +240,7 @@ def TrackWand():
     except Exception as e:
         print("No points found")
     # Create a mask image for drawing purposes
-    find_wand_timer = time.time() + 3
+    find_wand_timer = time.time() + scene_duration
     wand_timer = time.time() + wand_timeout
     while LampState() and time.time() < wand_timer:
         try:
@@ -273,7 +275,7 @@ def TrackWand():
                         if spell_cast:
                             wand_timer = time.time() + wand_timeout
                     dist = math.hypot(newX - oldX, newY - oldY)
-                    if (dist<movment_threshold):
+                    if (dist<movement_threshold):
                         cv2.line(mask, (newX,newY),(oldX,oldY),(0,255,0), 2)
                     cv2.circle(frame,(newX,newY),5,color,-1)
                     cv2.putText(frame, str(i), (newX,newY), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,0,255)) 
@@ -298,10 +300,10 @@ def TrackWand():
             e = sys.exc_info()[0]
             print("Tracking Error: %s" % e)
         
-        # Scene resets every 3 seconds
+        # Scene resets every `scene_duration` seconds
         if time.time() > find_wand_timer:
             rval,old_frame,old_gray,p0,mask,color,ig = FindWand(cam,rval,old_frame,old_gray,p0,mask,color,ig)
-            find_wand_timer = time.time() + 3
+            find_wand_timer = time.time() + scene_duration
     
     # The End
     End(cam)
@@ -330,4 +332,4 @@ def WatchSpellsOff():
     """Stop watching for spells."""
     LampState('off')
     # Light up for 5s to let the Wizard know you're done
-    lumos(0, (127, 10, 10))
+    lumos(0, (127, 10, 63))
