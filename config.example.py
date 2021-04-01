@@ -2,6 +2,8 @@
 Configuration variables for Potter Lamp server
 '''
 
+from cv2 import ROTATE_180, ROTATE_90_CLOCKWISE, ROTATE_90_COUNTERCLOCKWISE
+
 potter_lamp_config = {
     # Flask Server
     'host': '0.0.0.0',
@@ -12,6 +14,7 @@ potter_lamp_config = {
 
     # OpenCV
     'debug_opencv': False, # requires desktop x11 server
+    'rotate_camera': None, # optional camera rotation
 
     # Spells
     'watch_on_start': False,

@@ -17,7 +17,7 @@ Ollivander - Version 0.2
 Use your own wand or your interactive Harry Potter wands to control the IoT.
 
 Copyright (c) 2016 Sean O'Brien.  Permission is hereby granted, free of charge,
-to any person obtaining a copy of this software and associated documentation
+to any person obtaining newX copy of this software and associated documentation
 files (the "Software"), to deal in the Software without restriction, including
 without limitation the rights to use, copy, modify, merge, publish, distribute,
 sublicense, and/or sell copies of the Software, and to permit persons to whom
@@ -76,6 +76,7 @@ lk_params = dict( winSize  = (15,15),
                   criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 dilation_params = (5, 5)
 movment_threshold = 80
+rotate_camera = config['rotate_camera']
 
 # Spells
 spells_list = {
@@ -101,34 +102,42 @@ def StartCamera():
         print('Camera already open')
 
 
-def IsGesture(a,b,c,d,i,ig):
+def IsGesture(newX,newY,oldX,oldY,i,ig):
     """
     Determines if the point has moved.
     """
 
     spell_cast = False
     #look for basic movements - TODO: trained gestures
-    if ((a<(c-5))&(abs(b-d)<2)):
-        ig[i].append("!left")
-    elif ((c<(a-5))&(abs(b-d)<2)):
+    moveX = newX - oldX
+    moveY = newY - oldY
+    if moveX > 20 and abs(moveY) < 5:
         ig[i].append("!right")
-    elif ((b<(d-5))&(abs(a-c)<5)):
+    elif moveX < -20 and abs(moveY) < 5:
+        ig[i].append("!left")
+    elif moveY > 20 and abs(moveX) < 5:
         ig[i].append("!up")
-    elif ((d<(b-5))&(abs(a-c)<5)):
+    elif moveY < -20 and abs(moveX) < 5:
         ig[i].append("!down")
     #these are for moving diagnally
-	#Angle Down Left = ADL
-    elif (((b-d)/(c-a))>0.9):
-	    ig[i].append("!ADL")
-	#Angle Down Right = ADR
-    elif (((b-d)/(a-c))>0.9):
-	    ig[i].append("!ADR")
-	#Angle Up Right = AUR
-    elif (((d-b)/(a-c))>0.9):
-	    ig[i].append("!AUR")
+    # Check diagonals
+    if 0.9 < abs(moveX/moveY) < 1.1 and abs(moveX) > 20:
+        if moveX < 0 and moveY < 0:
+            ig[i].append("!ADL") # Down-Left
+        if moveX > 0 and moveY < 0:
+            ig[i].append("!ADR") # Down-Right
+        if moveX < 0 and moveY > 0:
+            ig[i].append("!AUL") # Up-Left
+        if moveX > 0 and moveY > 0:
+            ig[i].append("!AUR") # Up-Right
+
     # PART 5B 
     #check for gesture patterns in array
     astr = ''.join(map(str, ig[i]))
+
+    if abs(moveX) > 20 or abs(moveY) > 20:
+        print(f'-> movement: x={int(moveX * 100) / 100}, y={int(moveY * 100) / 100}')
+        print(f'    -> {astr}')
 
     # Look for spells in the casting string
     for motion, spell in spells_list.items():
@@ -155,6 +164,8 @@ def FindWand(cam,
 
     try:
         rval, old_frame = cam.read()
+        if rotate_camera is not None:
+            old_frame = cv2.rotate(old_frame, rotate_camera)
         cv2.flip(old_frame,1,old_frame)
         old_gray = cv2.cvtColor(old_frame,cv2.COLOR_BGR2GRAY)
         cv2.equalizeHist(old_gray)
@@ -207,6 +218,8 @@ def TrackWand():
     try:
         color = (0,0,255)
         rval, old_frame = cam.read()
+        if rotate_camera is not None:
+            old_frame = cv2.rotate(old_frame, rotate_camera)
         cv2.flip(old_frame,1,old_frame)
         old_gray = cv2.cvtColor(old_frame, cv2.COLOR_BGR2GRAY)
         cv2.equalizeHist(old_gray)
@@ -230,6 +243,8 @@ def TrackWand():
     while LampState() and time.time() < wand_timer:
         try:
             rval, frame = cam.read()
+            if rotate_camera is not None:
+                frame = cv2.rotate(frame, rotate_camera)
             cv2.flip(frame,1,frame)
             if p0 is not None:
                 frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -249,19 +264,19 @@ def TrackWand():
 
                 # draw the tracks
                 for i,(new,old) in enumerate(zip(good_new,good_old)):
-                    a,b = new.ravel()
-                    c,d = old.ravel()
+                    newX,newY = new.ravel()
+                    oldX,oldY = old.ravel()
                     # only try to detect gesture on highly-rated points (below 10)
                     if (i<15):
-                        ig, spell_cast = IsGesture(a,b,c,d,i,ig)
+                        ig, spell_cast = IsGesture(newX,newY,oldX,oldY,i,ig)
                         # reset timer if spell is cast
                         if spell_cast:
                             wand_timer = time.time() + wand_timeout
-                    dist = math.hypot(a - c, b - d)
+                    dist = math.hypot(newX - oldX, newY - oldY)
                     if (dist<movment_threshold):
-                        cv2.line(mask, (a,b),(c,d),(0,255,0), 2)
-                    cv2.circle(frame,(a,b),5,color,-1)
-                    cv2.putText(frame, str(i), (a,b), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,0,255)) 
+                        cv2.line(mask, (newX,newY),(oldX,oldY),(0,255,0), 2)
+                    cv2.circle(frame,(newX,newY),5,color,-1)
+                    cv2.putText(frame, str(i), (newX,newY), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,0,255)) 
                 img = cv2.add(frame,mask)
                 # save for debug
                 cv2.imwrite('test.jpg', img)
@@ -271,6 +286,8 @@ def TrackWand():
 
             # get next frame
             rval, frame = cam.read()
+            if rotate_camera is not None:
+                frame = cv2.rotate(frame, rotate_camera)
 
             # Now update the previous frame and previous points
             old_gray = frame_gray.copy()
