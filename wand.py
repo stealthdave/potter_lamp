@@ -61,10 +61,10 @@ def LampState(set=None):
         store.set(f'{redis_ns}:potter_lamp', set)
         lamp_state = set == 'on'
         set_emitters(lamp_state)
+        print(f'Set Lamp State: {lamp_state}')
     else:
         lamp_state = store.get(f'{redis_ns}:potter_lamp').decode('utf-8') == 'on'
 
-    print(f'Lamp State: {lamp_state}')
     return lamp_state
 
 # Set default lamp state
@@ -76,6 +76,14 @@ lk_params = dict( winSize  = (15,15),
                   criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 dilation_params = (5, 5)
 movment_threshold = 80
+
+# Spells
+spells_list = {
+    "!right!up": "lumos",
+    "!right!down": "nox",
+    "!left!up": "incendio",
+    "!left!down": "colovaria"
+}
 
 def StartCamera():
     """Initialize camera input."""
@@ -98,6 +106,7 @@ def IsGesture(a,b,c,d,i,ig):
     Determines if the point has moved.
     """
 
+    spell_cast = False
     #look for basic movements - TODO: trained gestures
     if ((a<(c-5))&(abs(b-d)<2)):
         ig[i].append("!left")
@@ -120,19 +129,15 @@ def IsGesture(a,b,c,d,i,ig):
     # PART 5B 
     #check for gesture patterns in array
     astr = ''.join(map(str, ig[i]))
-    if "!right!up" in astr:
-        cast_spell('lumos')
-    elif "!right!down" in astr:
-        cast_spell('nox')
-    elif "!left!up" in astr:
-        cast_spell('incendio')
-    elif "!left!down" in astr:
-        cast_spell('colovaria')
 
-    if "!" in astr:
-        print(f'Spell cast for point {i} string: {astr}')
+    # Look for spells in the casting string
+    for motion, spell in spells_list.items():
+        if motion in astr:
+            cast_spell(spell)
+            print(f'Spell "{spell}" cast for point {i} string: {astr}')
+            spell_cast = True
 
-    return ig
+    return ig, spell_cast
 
 
 def FindWand(cam,
@@ -179,16 +184,26 @@ def TrackWand():
     """
     Tracks wand points for 3 seconds.
     """
+    wand_timeout = config["wand_timeout"]
     cam = StartCamera()
     if not cam:
         print('=== NO CAMERA FOUND ===')
-        exit()
+        WatchSpellsOff()
+        exit
 
+    wand_timer = time.time() + wand_timeout
     rval,old_frame,old_gray,p0,mask,color,ig = FindWand(cam)
     # Loop every 3 seconds until a wand is found
-    while rval is None:
+    while rval is None and time.time() < wand_timer:
         time.sleep(3)
         rval,old_frame,old_gray,p0,mask,color,ig = FindWand(cam)
+
+    # check if we've started the scene successfully within timeout
+    if rval is None:
+        print('Scene not started.')
+        WatchSpellsOff()
+        exit
+
     try:
         color = (0,0,255)
         rval, old_frame = cam.read()
@@ -211,7 +226,8 @@ def TrackWand():
         print("No points found")
     # Create a mask image for drawing purposes
     find_wand_timer = time.time() + 3
-    while LampState():
+    wand_timer = time.time() + wand_timeout
+    while LampState() and time.time() < wand_timer:
         try:
             rval, frame = cam.read()
             cv2.flip(frame,1,frame)
@@ -237,7 +253,10 @@ def TrackWand():
                     c,d = old.ravel()
                     # only try to detect gesture on highly-rated points (below 10)
                     if (i<15):
-                        ig = IsGesture(a,b,c,d,i,ig)
+                        ig, spell_cast = IsGesture(a,b,c,d,i,ig)
+                        # reset timer if spell is cast
+                        if spell_cast:
+                            wand_timer = time.time() + wand_timeout
                     dist = math.hypot(a - c, b - d)
                     if (dist<movment_threshold):
                         cv2.line(mask, (a,b),(c,d),(0,255,0), 2)
@@ -269,13 +288,16 @@ def TrackWand():
     
     # The End
     End(cam)
+    WatchSpellsOff()
 
 def End(cam):
     # Stop IR emitter
     LampState('off')
     print('=== END ===')
-    if cam:
+    try:
 	    cam.close()
+    except Exception as e:
+        print('Camera not found.')
     cv2.destroyAllWindows()
 
 def WatchSpellsOn():
