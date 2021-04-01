@@ -281,7 +281,8 @@ def TrackWand():
                     cv2.putText(frame, str(i), (newX,newY), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,0,255)) 
                 img = cv2.add(frame,mask)
                 # save for debug
-                cv2.imwrite('test.jpg', img)
+                if config['debug_test_image']:
+                    cv2.imwrite('test.jpg', img)
 
             if debug_opencv:
                 cv2.imshow("Raspberry Potter", frame)

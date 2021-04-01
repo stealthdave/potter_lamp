@@ -14,6 +14,7 @@ potter_lamp_config = {
 
     # OpenCV
     'debug_opencv': False, # requires desktop x11 server
+    'debug_test_image': False, # saves image capture with found points to file
     'rotate_camera': None, # optional camera rotation
 
     # Spells
