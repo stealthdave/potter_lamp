@@ -17,7 +17,7 @@ Ollivander - Version 0.2
 Use your own wand or your interactive Harry Potter wands to control the IoT.
 
 Copyright (c) 2016 Sean O'Brien.  Permission is hereby granted, free of charge,
-to any person obtaining newX copy of this software and associated documentation
+to any person obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without restriction, including
 without limitation the rights to use, copy, modify, merge, publish, distribute,
 sublicense, and/or sell copies of the Software, and to permit persons to whom
@@ -43,6 +43,7 @@ import math
 import time
 import warnings
 import redis
+import re
 from PIL import Image
 from config import potter_lamp_config as config
 from spells import cast_spell, lumos
@@ -75,7 +76,7 @@ lk_params = dict( winSize  = (15,15),
                   maxLevel = 2,
                   criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 dilation_params = (5, 5)
-movement_threshold = 50
+movement_threshold = 15
 static_threshold = 20
 scene_duration = 5
 rotate_camera = config['rotate_camera']
@@ -87,6 +88,9 @@ spells_list = {
     "!left!up": "incendio",
     "!left!down": "colovaria"
 }
+
+motions_list = ('!right', '!left', '!up', '!down',
+                '!ADR', '!ADL', '!AUR', '!AUL')
 
 def StartCamera():
     """Initialize camera input."""
@@ -113,17 +117,17 @@ def IsGesture(newX,newY,oldX,oldY,i,ig):
     #look for basic movements - TODO: trained gestures
     moveX = newX - oldX
     moveY = newY - oldY
-    if moveX > movement_threshold and abs(moveY) < static_threshold:
+    # if moveX > movement_threshold and abs(moveY) < static_threshold:
+    if moveX > movement_threshold and abs(moveY) < abs(moveX / 3):
         ig[i].append("!right")
-    elif moveX < (0 - movement_threshold) and abs(moveY) < static_threshold:
+    elif moveX < (0 - movement_threshold) and abs(moveY) < abs(moveX / 3):
         ig[i].append("!left")
-    elif moveY > movement_threshold and abs(moveX) < static_threshold:
+    elif moveY > movement_threshold and abs(moveX) < abs(moveY / 3):
         ig[i].append("!up")
-    elif moveY < (0 - movement_threshold) and abs(moveX) < static_threshold:
+    elif moveY < (0 - movement_threshold) and abs(moveX) < abs(moveY / 3):
         ig[i].append("!down")
-    #these are for moving diagnally
     # Check diagonals
-    if 0.9 < abs(moveX/moveY) < 1.1 and abs(moveX) > movement_threshold:
+    elif 0.8 < abs(moveX/moveY) < 1.2 and abs(moveX) > movement_threshold:
         if moveX < 0 and moveY < 0:
             ig[i].append("!ADL") # Down-Left
         if moveX > 0 and moveY < 0:
@@ -141,6 +145,10 @@ def IsGesture(newX,newY,oldX,oldY,i,ig):
         print(f'-> movement: x={int(moveX * 100) / 100}, y={int(moveY * 100) / 100}')
         print(f'    -> {astr}')
 
+    # Remove adjacent duplicate motions
+    for motion in motions_list:
+        astr = re.sub(r'({0})+'.format(motion), motion, astr)
+
     # Look for spells in the casting string
     for motion, spell in spells_list.items():
         if motion in astr:
@@ -151,14 +159,7 @@ def IsGesture(newX,newY,oldX,oldY,i,ig):
     return ig, spell_cast
 
 
-def FindWand(cam,
-             rval=None,
-             old_frame=None,
-             old_gray=None,
-             p0=None,
-             mask=None,
-             color=None,
-             ig=None):
+def FindWand(cam):
     """
     FindWand is called to find all potential wands in a scene.  These are then 
     tracked as points for movement.  The scene is reset based on scene_duration.
@@ -181,16 +182,16 @@ def FindWand(cam,
         if p0 is not None:
             p0.shape = (p0.shape[1], 1, p0.shape[2])
             p0 = p0[:,:,0:2]
-            mask = np.zeros_like(old_frame)
-            ig = [[0] for x in range(20)]
+        mask = np.zeros_like(old_frame)
+        ig = [[0] for x in range(20)]
+
+        print("finding...")
+        return rval,old_frame,old_gray,p0,mask,ig
 
     except Exception as e:
         print(f'Error: {e}')
         End(cam)
         exit
-    
-    print("finding...")
-    return rval,old_frame,old_gray,p0,mask,color,ig
 
 
 def TrackWand():
@@ -205,11 +206,11 @@ def TrackWand():
         exit
 
     wand_timer = time.time() + wand_timeout
-    rval,old_frame,old_gray,p0,mask,color,ig = FindWand(cam)
+    rval,old_frame,old_gray,p0,mask,ig = FindWand(cam)
     # Loop every `scene_duration` seconds until a wand is found
     while rval is None and time.time() < wand_timer:
         time.sleep(scene_duration)
-        rval,old_frame,old_gray,p0,mask,color,ig = FindWand(cam)
+        rval,old_frame,old_gray,p0,mask,ig = FindWand(cam)
 
     # check if we've started the scene successfully within timeout
     if rval is None:
@@ -242,7 +243,9 @@ def TrackWand():
     # Create a mask image for drawing purposes
     find_wand_timer = time.time() + scene_duration
     wand_timer = time.time() + wand_timeout
+    captures = 0
     while LampState() and time.time() < wand_timer:
+        captures = captures + 1
         try:
             rval, frame = cam.read()
             if rotate_camera is not None:
@@ -303,8 +306,11 @@ def TrackWand():
         
         # Scene resets every `scene_duration` seconds
         if time.time() > find_wand_timer:
-            rval,old_frame,old_gray,p0,mask,color,ig = FindWand(cam,rval,old_frame,old_gray,p0,mask,color,ig)
+            rval,old_frame,old_gray,p0,mask,ig = FindWand(cam)
             find_wand_timer = time.time() + scene_duration
+            print(f'Images captured this scene: {captures}')
+            print(f'{len(ig)} points found in new scene.')
+            captures = 0
     
     # The End
     End(cam)
