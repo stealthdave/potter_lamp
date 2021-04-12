@@ -18,8 +18,8 @@ potter_lamp_config = {
     'rotate_camera': None, # optional camera rotation
 
     # Spells
-    'watch_on_start': False,
-    'wand_timeout': 600,
+    'watch_on_start': False, # start watching for spells on server start
+    'wand_timeout': 600, # negative value never times out
 
     # IR Emitters
     'emitters_pin': 17,

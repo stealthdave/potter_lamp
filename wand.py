@@ -208,7 +208,7 @@ def TrackWand():
     wand_timer = time.time() + wand_timeout
     rval,old_frame,old_gray,p0,mask,ig = FindWand(cam)
     # Loop every `scene_duration` seconds until a wand is found
-    while rval is None and time.time() < wand_timer:
+    while rval is None and (time.time() < wand_timer or wand_timeout < 0):
         time.sleep(scene_duration)
         rval,old_frame,old_gray,p0,mask,ig = FindWand(cam)
 
@@ -244,7 +244,7 @@ def TrackWand():
     find_wand_timer = time.time() + scene_duration
     wand_timer = time.time() + wand_timeout
     captures = 0
-    while LampState() and time.time() < wand_timer:
+    while LampState() and (time.time() < wand_timer or wand_timeout < 0):
         captures = captures + 1
         try:
             rval, frame = cam.read()
