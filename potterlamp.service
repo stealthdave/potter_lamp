@@ -1,0 +1,21 @@
+[Unit]
+Description=Harry Potter Magic Lamp
+After=network.target
+Wants=network.target
+
+[Service]
+WorkingDirectory=/opt/potter_lamp/
+ExecStart=/opt/potter_lamp/lampvenv/bin/python /opt/potter_lamp/potterServer.py
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+Restart=on-failure
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=POTTERLAMP
+Type=forking
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target
