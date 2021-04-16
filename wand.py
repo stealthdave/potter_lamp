@@ -340,3 +340,7 @@ def WatchSpellsOff():
     LampState('off')
     # Light up for 5s to let the Wizard know you're done
     lumos(0, (127, 10, 63))
+
+def WatchSpellsStatus():
+    """Return lamp status."""
+    return LampState()

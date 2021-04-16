@@ -10,7 +10,7 @@ import threading
 
 from spells import lumos, nox, incendio, colovaria
 from config import potter_lamp_config as config
-from wand import WatchSpellsOn, WatchSpellsOff
+from wand import WatchSpellsOn, WatchSpellsOff, WatchSpellsStatus
 from emitters import set_emitters
 
 app = Flask(__name__)
@@ -69,6 +69,11 @@ def wand_off():
     """Stop watching for spells."""
     WatchSpellsOff()
     return "wand off"
+
+@app.route('/wand/status')
+def wand_status():
+    """Check status of watching for spells."""
+    return "wand on" if WatchSpellsStatus() else "wand off"
 
 
 if config['watch_on_start']:
