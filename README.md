@@ -92,8 +92,8 @@ currently available endpoints:
 # Acknowledgements
 Inspired by many other Harry Potter Spell projects including:
 
-Adam Thole Smart Home Control Wand - https://www.adamthole.com/control-smart-home-with-magic-wand-video/
-Raspberry Potter - https://www.raspberrypotter.net/ | https://github.com/sean-obrien/rpotter
+* Adam Thole Smart Home Control Wand - https://www.adamthole.com/control-smart-home-with-magic-wand-video/
+* Raspberry Potter - https://www.raspberrypotter.net/ | https://github.com/sean-obrien/rpotter
 
 Other related tutorials and libraries:
 * https://learn.adafruit.com/neopixels-on-raspberry-pi/python-usage
