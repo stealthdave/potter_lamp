@@ -5,8 +5,10 @@ more powerful server used to identify said spells.  It also handles turning
 on and off the IR emitters which can get hot if they're left on all the time.
 """
 
-from flask import Flask
+from flask import Flask, make_response
 import threading
+import redis
+import pickle
 
 from spells import lumos, nox, incendio, colovaria
 from config import potter_lamp_config as config
@@ -15,6 +17,9 @@ from emitters import set_emitters
 
 app = Flask(__name__)
 
+# Use redis to track state of lamp
+redis_ns = config["redis_namespace"]
+store = redis.Redis() # defaults for localhost will work just fine
 
 @app.route('/')
 def index():
@@ -74,6 +79,21 @@ def wand_off():
 def wand_status():
     """Check status of watching for spells."""
     return "wand on" if WatchSpellsStatus() else "wand off"
+
+@app.route('/wand/image')
+def wand_image():
+    """Return current image seen by camera with points found."""
+    if not config['debug_test_image']:
+        return 'Image debug is currently disabled.'
+
+    img_key = f'{redis_ns}:image'
+    if store.exists(img_key):
+        img_encoded = pickle.loads(store.get(img_key))
+        response = make_response(img_encoded.tobytes())
+        response.headers['Content-Type'] = 'image/jpg'
+        return response
+    else:
+        return "No image."
 
 
 if config['watch_on_start']:

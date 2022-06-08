@@ -44,6 +44,7 @@ import warnings
 import redis
 import re
 import traceback
+import pickle
 from PIL import Image
 from config import potter_lamp_config as config
 from spells import cast_spell, lumos
@@ -289,9 +290,12 @@ def TrackWand():
                     cv2.circle(frame,(int(newX),int(newY)),5,color,-1)
                     cv2.putText(frame, str(i), (int(newX),int(newY)), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,0,255)) 
                 img = cv2.add(frame,mask)
+
                 # save for debug
                 if config['debug_test_image']:
-                    cv2.imwrite('test.jpg', img)
+                    # save for Flask endpoint
+                    _, img_encoded = cv2.imencode('.jpg', img)
+                    store.set(f'{redis_ns}:image', pickle.dumps(img_encoded))
 
             if debug_opencv:
                 cv2.imshow("Raspberry Potter", frame)
