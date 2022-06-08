@@ -10,7 +10,7 @@ import threading
 import redis
 import pickle
 
-from spells import lumos, nox, incendio, colovaria
+from spells import cast_spell
 from config import potter_lamp_config as config
 from wand import WatchSpellsOn, WatchSpellsOff, WatchSpellsStatus
 from emitters import set_emitters
@@ -28,25 +28,25 @@ def index():
 
 @app.route('/spells/lumos')
 def cast_lumos():
-    spell = threading.Thread(target=lumos)
+    spell = threading.Thread(target=cast_spell, args=('lumos',))
     spell.start()
     return "lumos on"
 
 @app.route('/spells/incendio')
 def cast_incendio():
-    spell = threading.Thread(target=incendio)
+    spell = threading.Thread(target=cast_spell, args=('incendio',))
     spell.start()
     return "incendio on"
 
 @app.route('/spells/colovaria')
 def cast_colovaria():
-    spell = threading.Thread(target=colovaria)
+    spell = threading.Thread(target=cast_spell, args=('colovaria',))
     spell.start()
     return "colovaria on"
 
 @app.route('/spells/nox')
 def cast_nox():
-    spell = threading.Thread(target=nox)
+    spell = threading.Thread(target=cast_spell, args=('nox',))
     spell.start()
     return "nox on"
 
