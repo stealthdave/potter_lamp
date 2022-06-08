@@ -95,6 +95,29 @@ def wand_image():
     else:
         return "No image."
 
+@app.route('/wand/watch')
+def wand_watch():
+    """Watch debug image with refresh."""
+    if not config['debug_test_image']:
+        return 'Image debug is currently disabled.'
+
+    return '''
+    <html>
+        <head>
+            <title>This is what your lamp sees!</title>
+        </head>
+        <body style="text-align: center;">
+            <img src='/wand/image' />
+            <script>
+                let img = document.querySelector('img')
+                setInterval(() => {
+                    img.src = '/wand/image?refresh=' + (new Date()).valueOf()
+                }, 1000)
+            </script>
+        </body>
+    </html>
+    '''
+
 
 if config['watch_on_start']:
     print("Watch for spells autostarted.")
