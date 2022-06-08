@@ -21,6 +21,7 @@ pixels.fill((0,0,0))
 redis_ns = config["redis_namespace"]
 store = redis.Redis() # defaults for localhost will work just fine
 store.set(f'{redis_ns}:potter_lights', 'off')
+store.set(f'{redis_ns}:current_spell', '')
 
 def set_current_color(color):
     """Set the current color of the lamp. (Used by Nox.)"""
@@ -55,7 +56,7 @@ def lumos(lamp_duration=180, start_color=(255, 255, 255)):
     set_lights_state(True)
     for val in range(0, 255, 4):
         # if someone casts "Nox", stop turning on lights
-        if not get_lights_state():
+        if not get_lights_state() or store.get(f'{redis_ns}:current_spell') != 'lumos':
             break
         color = (val * start_color[0] / 256,
                  val * start_color[1] / 256,
@@ -87,14 +88,16 @@ def nox():
     pixels.fill((0, 0, 0))
     set_current_color((0, 0, 0))
     print("nox complete")
+    # All spells end in Nox
+    store.set(f'{redis_ns}:current_spell', '')
     return
 
-def incendio(lamp_duration=300):
+def incendio(lamp_duration=180):
     """Incendio - FIRE!!!"""
-    duration = lamp_duration # burn for 5 minutes by default
+    duration = lamp_duration # burn for 3 minutes by default
     interval = 0.1 # change the flame every 1/10s
     set_lights_state(True)
-    while duration > 0 and get_lights_state():
+    while duration > 0 and get_lights_state() and store.get(f'{redis_ns}:current_spell') == 'incendio':
         current_color = get_current_color()
         color = (random.randint(100, 255), random.randint(0, 40), 0)
         for val in range(10):
@@ -112,12 +115,12 @@ def incendio(lamp_duration=300):
     print("incendio complete")
     return
 
-def colovaria(lamp_duration=300):
+def colovaria(lamp_duration=180):
     """Colovaria - lots of colors"""
-    duration = lamp_duration # kaleidascope for 5 minutes by default
+    duration = lamp_duration # kaleidascope for 3 minutes by default
     interval = 0.2 # change the color every 2/10s
     set_lights_state(True)
-    while duration > 0 and get_lights_state():
+    while duration > 0 and get_lights_state() and store.get(f'{redis_ns}:current_spell') == 'colovaria':
         current_color = get_current_color()
         color = (
             random.randint(20, 255),
@@ -142,15 +145,17 @@ def colovaria(lamp_duration=300):
 
 def cast_spell(spell):
     cast = None
-    if spell == 'lumos':
-        cast = threading.Thread(target=lumos)
-    elif spell == 'nox':
-        cast = threading.Thread(target=nox)
-    elif spell == 'incendio':
-        cast = threading.Thread(target=incendio)
-    elif spell == 'colovaria':
-        cast = threading.Thread(target=colovaria)
-    if cast is not None:
-        cast.start()
+    if store.get(f'{redis_ns}:current_spell') != spell:
+        if spell == 'lumos':
+            cast = threading.Thread(target=lumos)
+        elif spell == 'nox':
+            cast = threading.Thread(target=nox)
+        elif spell == 'incendio':
+            cast = threading.Thread(target=incendio)
+        elif spell == 'colovaria':
+            cast = threading.Thread(target=colovaria)
+        if cast is not None:
+            store.set(f'{redis_ns}:current_spell', spell)
+            cast.start()
     
     return cast

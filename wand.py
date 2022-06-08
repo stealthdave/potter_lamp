@@ -37,13 +37,13 @@ SOFTWARE.
 
 import numpy as np
 import cv2
-import picamera
 import sys
 import math
 import time
 import warnings
 import redis
 import re
+import traceback
 from PIL import Image
 from config import potter_lamp_config as config
 from spells import cast_spell, lumos
@@ -77,7 +77,7 @@ lk_params = dict( winSize  = (15,15),
                   criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 dilation_params = (5, 5)
 movement_threshold = 15
-static_threshold = 20
+static_threshold = 15
 scene_duration = 5
 rotate_camera = config['rotate_camera']
 
@@ -89,8 +89,8 @@ spells_list = {
     "!left!down": "colovaria"
 }
 
-motions_list = ('!right', '!left', '!up', '!down',
-                '!ADR', '!ADL', '!AUR', '!AUL')
+motions_list = ("!right", "!left", "!up", "!down",
+                "!ADR", "!ADL", "!AUR", "!AUL")
 
 def StartCamera():
     """Initialize camera input."""
@@ -117,25 +117,28 @@ def IsGesture(newX,newY,oldX,oldY,i,ig):
     #look for basic movements - TODO: trained gestures
     moveX = newX - oldX
     moveY = newY - oldY
-    # if moveX > movement_threshold and abs(moveY) < static_threshold:
-    if moveX > movement_threshold and abs(moveY) < abs(moveX / 3):
+    if moveX > movement_threshold and abs(moveX) > abs(moveY):
+    # if moveX > movement_threshold and abs(moveY) < abs(moveX / 3):
         ig[i].append("!right")
-    elif moveX < (0 - movement_threshold) and abs(moveY) < abs(moveX / 3):
+    elif moveX < (0 - movement_threshold) and abs(moveX) > abs(moveY):
+    # elif moveX < (0 - movement_threshold) and abs(moveY) < abs(moveX / 3):
         ig[i].append("!left")
-    elif moveY > movement_threshold and abs(moveX) < abs(moveY / 3):
+    elif moveY > movement_threshold and abs(moveX) < abs(moveY):
+    # elif moveY > movement_threshold and abs(moveX) < abs(moveY / 3):
         ig[i].append("!up")
-    elif moveY < (0 - movement_threshold) and abs(moveX) < abs(moveY / 3):
+    elif moveY < (0 - movement_threshold) and abs(moveX) < abs(moveY):
+    # elif moveY < (0 - movement_threshold) and abs(moveX) < abs(moveY / 3):
         ig[i].append("!down")
     # Check diagonals
-    elif 0.8 < abs(moveX/moveY) < 1.2 and abs(moveX) > movement_threshold:
-        if moveX < 0 and moveY < 0:
-            ig[i].append("!ADL") # Down-Left
-        if moveX > 0 and moveY < 0:
-            ig[i].append("!ADR") # Down-Right
-        if moveX < 0 and moveY > 0:
-            ig[i].append("!AUL") # Up-Left
-        if moveX > 0 and moveY > 0:
-            ig[i].append("!AUR") # Up-Right
+    # elif 0.8 < abs(moveX/moveY) < 1.2 and abs(moveX) > movement_threshold:
+    #     if moveX < 0 and moveY < 0:
+    #         ig[i].append("!ADL") # Down-Left
+    #     if moveX > 0 and moveY < 0:
+    #         ig[i].append("!ADR") # Down-Right
+    #     if moveX < 0 and moveY > 0:
+    #         ig[i].append("!AUL") # Up-Left
+    #     if moveX > 0 and moveY > 0:
+    #         ig[i].append("!AUR") # Up-Right
 
     # PART 5B 
     #check for gesture patterns in array
@@ -145,16 +148,13 @@ def IsGesture(newX,newY,oldX,oldY,i,ig):
         print(f'-> movement: x={int(moveX * 100) / 100}, y={int(moveY * 100) / 100}')
         print(f'    -> {astr}')
 
-    # Remove adjacent duplicate motions
-    for motion in motions_list:
-        astr = re.sub(r'({0})+'.format(motion), motion, astr)
-
     # Look for spells in the casting string
     for motion, spell in spells_list.items():
         if motion in astr:
             cast_spell(spell)
             print(f'Spell "{spell}" cast for point {i} string: {astr}')
             spell_cast = True
+            break # only cast one spell
 
     return ig, spell_cast
 
@@ -244,10 +244,15 @@ def TrackWand():
     find_wand_timer = time.time() + scene_duration
     wand_timer = time.time() + wand_timeout
     captures = 0
+    frame_gray = None
+    good_new = None
+    good_old = None
     while LampState() and (time.time() < wand_timer or wand_timeout < 0):
         captures = captures + 1
         try:
             rval, frame = cam.read()
+            if frame is None:
+                continue
             if rotate_camera is not None:
                 frame = cv2.rotate(frame, rotate_camera)
             cv2.flip(frame,1,frame)
@@ -264,24 +269,25 @@ def TrackWand():
                 p1, st, err = cv2.calcOpticalFlowPyrLK(old_gray, frame_gray, p0, None, **lk_params)
 
                 # Select good points
-                good_new = p1[st==1]
-                good_old = p0[st==1]
+                good_new = p1[st==1] if p1 is not None else good_new
+                good_old = p0[st==1] if p0 is not None else good_old
 
                 # draw the tracks
                 for i,(new,old) in enumerate(zip(good_new,good_old)):
                     newX,newY = new.ravel()
                     oldX,oldY = old.ravel()
                     # only try to detect gesture on highly-rated points (below 10)
-                    if (i<15):
+                    if (i<10):
                         ig, spell_cast = IsGesture(newX,newY,oldX,oldY,i,ig)
+                        time.sleep(0.1)
                         # reset timer if spell is cast
                         if spell_cast:
                             wand_timer = time.time() + wand_timeout
                     dist = math.hypot(newX - oldX, newY - oldY)
                     if (dist<movement_threshold):
-                        cv2.line(mask, (newX,newY),(oldX,oldY),(0,255,0), 2)
-                    cv2.circle(frame,(newX,newY),5,color,-1)
-                    cv2.putText(frame, str(i), (newX,newY), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,0,255)) 
+                        cv2.line(mask, (int(newX),int(newY)),(int(oldX),int(oldY)),(0,255,0), 2)
+                    cv2.circle(frame,(int(newX),int(newY)),5,color,-1)
+                    cv2.putText(frame, str(i), (int(newX),int(newY)), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,0,255)) 
                 img = cv2.add(frame,mask)
                 # save for debug
                 if config['debug_test_image']:
@@ -296,13 +302,14 @@ def TrackWand():
                 frame = cv2.rotate(frame, rotate_camera)
 
             # Now update the previous frame and previous points
-            old_gray = frame_gray.copy()
-            p0 = good_new.reshape(-1,1,2)
+            old_gray = frame_gray.copy() if frame_gray is not None else None
+            p0 = good_new.reshape(-1,1,2) if good_new is not None else None
         except IndexError:
             print("Index error - Tracking")  
         except Exception as error:
-            e = sys.exc_info()[0]
-            print("Tracking Error: %s" % e)
+            # e = sys.exc_info()[0]
+            print(f'Tracking Error: {error}')
+            print(traceback.format_exc())
         
         # Scene resets every `scene_duration` seconds
         if time.time() > find_wand_timer:
