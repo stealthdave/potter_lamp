@@ -30,8 +30,9 @@ The software setup assumes that you are running Raspberry Pi OS Debian Minimal
 (no desktop).  This implementation of the Harry Potter lamp requires the
 following software:
 
+* Debian GNU/Linux 11 (Bullseye) Minimal (no desktop) for Raspberry Pi
 * Python 3 with Virtual Environments
-* OpenCV 3.2.0 with Python bindings
+* OpenCV 4.5.x with Python bindings
 * redis (primarily for communcation between threads)
 
 ## Install Requirements
@@ -84,6 +85,7 @@ currently available endpoints:
 
 * `/wand/on` - Start watching for spells.
 * `/wand/off` - Stop watching for spells.
+* `/wand/watch` - View the OpenCV processed image (debug mode must be on)
 * `/emitters/on` - Turn on IR emitters independently of watching for spells.
 * `/emitters/off` - Turn off IR emitters.
 * `/spells/*` - Cast a "spell" manually, e.g. "lumos" or "nox"
