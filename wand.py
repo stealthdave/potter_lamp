@@ -73,14 +73,16 @@ def LampState(set=None):
 LampState('off')
 
 # OpenCV Parameters for image processing
-lk_params = dict( winSize  = (15,15),
-                  maxLevel = 2,
+lk_params = dict( winSize  = (25,25),
+                  maxLevel = 10,
                   criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 dilation_params = (5, 5)
 movement_threshold = 15
 static_threshold = 15
 scene_duration = 5
 rotate_camera = config['rotate_camera']
+# Background removal filter
+fgbg = cv2.createBackgroundSubtractorMOG2()
 
 # Spells
 spells_list = {
@@ -114,40 +116,41 @@ def IsGesture(newX,newY,oldX,oldY,i,ig):
     Determines if the point has moved.
     """
 
+    point_gestures = ig
     spell_cast = False
     #look for basic movements - TODO: trained gestures
     moveX = newX - oldX
     moveY = newY - oldY
-    if moveX > movement_threshold and abs(moveX) > abs(moveY):
-    # if moveX > movement_threshold and abs(moveY) < abs(moveX / 3):
-        ig[i].append("!right")
-    elif moveX < (0 - movement_threshold) and abs(moveX) > abs(moveY):
-    # elif moveX < (0 - movement_threshold) and abs(moveY) < abs(moveX / 3):
-        ig[i].append("!left")
-    elif moveY > movement_threshold and abs(moveX) < abs(moveY):
-    # elif moveY > movement_threshold and abs(moveX) < abs(moveY / 3):
-        ig[i].append("!up")
-    elif moveY < (0 - movement_threshold) and abs(moveX) < abs(moveY):
-    # elif moveY < (0 - movement_threshold) and abs(moveX) < abs(moveY / 3):
-        ig[i].append("!down")
+    # if moveX > movement_threshold and abs(moveX) > abs(moveY):
+    if moveX > movement_threshold and abs(moveY) < abs(moveX / 3):
+        point_gestures[i].append("!right")
+    # elif moveX < (0 - movement_threshold) and abs(moveX) > abs(moveY):
+    elif moveX < (0 - movement_threshold) and abs(moveY) < abs(moveX / 3):
+        point_gestures[i].append("!left")
+    # elif moveY > movement_threshold and abs(moveX) < abs(moveY):
+    elif moveY > movement_threshold and abs(moveX) < abs(moveY / 3):
+        point_gestures[i].append("!up")
+    # elif moveY < (0 - movement_threshold) and abs(moveX) < abs(moveY):
+    elif moveY < (0 - movement_threshold) and abs(moveX) < abs(moveY / 3):
+        point_gestures[i].append("!down")
     # Check diagonals
     # elif 0.8 < abs(moveX/moveY) < 1.2 and abs(moveX) > movement_threshold:
     #     if moveX < 0 and moveY < 0:
-    #         ig[i].append("!ADL") # Down-Left
+    #         point_gestures[i].append("!ADL") # Down-Left
     #     if moveX > 0 and moveY < 0:
-    #         ig[i].append("!ADR") # Down-Right
+    #         point_gestures[i].append("!ADR") # Down-Right
     #     if moveX < 0 and moveY > 0:
-    #         ig[i].append("!AUL") # Up-Left
+    #         point_gestures[i].append("!AUL") # Up-Left
     #     if moveX > 0 and moveY > 0:
-    #         ig[i].append("!AUR") # Up-Right
+    #         point_gestures[i].append("!AUR") # Up-Right
 
     # PART 5B 
     #check for gesture patterns in array
-    astr = ''.join(map(str, ig[i]))
+    astr = ''.join(map(str, point_gestures[i]))
 
     if abs(moveX) > movement_threshold or abs(moveY) > movement_threshold:
-        print(f'-> movement: x={int(moveX * 100) / 100}, y={int(moveY * 100) / 100}')
-        print(f'    -> {astr}')
+        print(f'-> movement: dx={int(moveX * 100) / 100}, dy={int(moveY * 100) / 100}')
+        print(f'    -> {i}: {astr}')
 
     # Look for spells in the casting string
     for motion, spell in spells_list.items():
@@ -157,8 +160,27 @@ def IsGesture(newX,newY,oldX,oldY,i,ig):
             spell_cast = True
             break # only cast one spell
 
-    return ig, spell_cast
+    return point_gestures, spell_cast
 
+
+def ProcessImage(frame):
+    """
+    Take the input frame and add filters for isolating points.
+    """
+
+    filtered = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+    cv2.equalizeHist(filtered)
+    filtered = cv2.GaussianBlur(filtered,(9,9),1.5)
+    dilate_kernel = np.ones(dilation_params, np.uint8)
+    filtered = cv2.dilate(filtered, dilate_kernel, iterations=1)
+    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
+    filtered = clahe.apply(filtered)
+    # Background removal from mamacker's pi_to_potter
+    fgmask = fgbg.apply(filtered, learningRate=0.001)
+    filtered = cv2.bitwise_and(
+        filtered, filtered, mask=fgmask)
+
+    return filtered
 
 def FindWand(cam):
     """
@@ -171,20 +193,14 @@ def FindWand(cam):
         if rotate_camera is not None:
             old_frame = cv2.rotate(old_frame, rotate_camera)
         cv2.flip(old_frame,1,old_frame)
-        old_gray = cv2.cvtColor(old_frame,cv2.COLOR_BGR2GRAY)
-        cv2.equalizeHist(old_gray)
-        old_gray = cv2.GaussianBlur(old_gray,(9,9),1.5)
-        dilate_kernel = np.ones(dilation_params, np.uint8)
-        old_gray = cv2.dilate(old_gray, dilate_kernel, iterations=1)
-        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
-        old_gray = clahe.apply(old_gray)
+        old_gray = ProcessImage(old_frame)
         #TODO: trained image recognition
         p0 = cv2.HoughCircles(old_gray,cv2.HOUGH_GRADIENT,3,50,param1=240,param2=8,minRadius=4,maxRadius=15)
         if p0 is not None:
             p0.shape = (p0.shape[1], 1, p0.shape[2])
             p0 = p0[:,:,0:2]
         mask = np.zeros_like(old_frame)
-        ig = [[0] for x in range(20)]
+        ig = [[''] for x in range(20)]
 
         print("finding...")
         return rval,old_frame,old_gray,p0,mask,ig
@@ -225,13 +241,7 @@ def TrackWand():
         if rotate_camera is not None:
             old_frame = cv2.rotate(old_frame, rotate_camera)
         cv2.flip(old_frame,1,old_frame)
-        old_gray = cv2.cvtColor(old_frame, cv2.COLOR_BGR2GRAY)
-        cv2.equalizeHist(old_gray)
-        old_gray = GaussianBlur(old_gray,(9,9),1.5)
-        dilate_kernel = np.ones(dilation_params, np.uint8)
-        old_gray = cv2.dilate(old_gray, dilate_kernel, iterations=1)
-        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
-        old_gray = clahe.apply(old_gray)
+        old_gray = ProcessImage(old_frame)
 
         # Take first frame and find circles in it
         p0 = cv2.HoughCircles(old_gray,cv2.HOUGH_GRADIENT,3,50,param1=240,param2=8,minRadius=4,maxRadius=15)
@@ -258,13 +268,7 @@ def TrackWand():
                 frame = cv2.rotate(frame, rotate_camera)
             cv2.flip(frame,1,frame)
             if p0 is not None:
-                frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                cv2.equalizeHist(frame_gray)
-                frame_gray = cv2.GaussianBlur(frame_gray,(9,9),1.5)
-                dilate_kernel = np.ones(dilation_params, np.uint8)
-                frame_gray = cv2.dilate(frame_gray, dilate_kernel, iterations=1)
-                frame_clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
-                frame_gray = frame_clahe.apply(frame_gray)
+                frame_gray = ProcessImage(frame)
 
                 # calculate optical flow
                 p1, st, err = cv2.calcOpticalFlowPyrLK(old_gray, frame_gray, p0, None, **lk_params)
@@ -285,7 +289,7 @@ def TrackWand():
                         if spell_cast:
                             wand_timer = time.time() + wand_timeout
                     dist = math.hypot(newX - oldX, newY - oldY)
-                    if (dist<movement_threshold):
+                    if (dist>movement_threshold):
                         cv2.line(mask, (int(newX),int(newY)),(int(oldX),int(oldY)),(0,255,0), 2)
                     cv2.circle(frame,(int(newX),int(newY)),5,color,-1)
                     cv2.putText(frame, str(i), (int(newX),int(newY)), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,0,255)) 
@@ -294,7 +298,8 @@ def TrackWand():
                 # save for debug
                 if config['debug_test_image']:
                     # save for Flask endpoint
-                    _, img_encoded = cv2.imencode('.jpg', img)
+                    # _, img_encoded = cv2.imencode('.jpg', img)
+                    _, img_encoded = cv2.imencode('.jpg', frame_gray)
                     store.set(f'{redis_ns}:image', pickle.dumps(img_encoded))
 
             if debug_opencv:
