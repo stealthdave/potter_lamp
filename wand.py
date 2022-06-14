@@ -78,7 +78,7 @@ lk_params = dict( winSize  = (25,25),
                   criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 dilation_params = (5, 5)
 movement_threshold = 15
-static_threshold = 15
+static_threshold = 5
 scene_duration = 5
 rotate_camera = config['rotate_camera']
 # Background removal filter
@@ -121,17 +121,17 @@ def IsGesture(newX,newY,oldX,oldY,i,ig):
     #look for basic movements - TODO: trained gestures
     moveX = newX - oldX
     moveY = newY - oldY
-    # if moveX > movement_threshold and abs(moveX) > abs(moveY):
-    if moveX > movement_threshold and abs(moveY) < abs(moveX / 3):
+    if moveX > movement_threshold and abs(moveY) < static_threshold:
+    # if moveX > movement_threshold and abs(moveY) < abs(moveX / 3):
         point_gestures[i].append("!right")
-    # elif moveX < (0 - movement_threshold) and abs(moveX) > abs(moveY):
-    elif moveX < (0 - movement_threshold) and abs(moveY) < abs(moveX / 3):
+    elif moveX < (0 - movement_threshold) and abs(moveY) < static_threshold:
+    # elif moveX < (0 - movement_threshold) and abs(moveY) < abs(moveX / 3):
         point_gestures[i].append("!left")
-    # elif moveY > movement_threshold and abs(moveX) < abs(moveY):
-    elif moveY > movement_threshold and abs(moveX) < abs(moveY / 3):
+    elif moveY > movement_threshold and abs(moveX) < static_threshold:
+    # elif moveY > movement_threshold and abs(moveX) < abs(moveY / 3):
         point_gestures[i].append("!up")
-    # elif moveY < (0 - movement_threshold) and abs(moveX) < abs(moveY):
-    elif moveY < (0 - movement_threshold) and abs(moveX) < abs(moveY / 3):
+    elif moveY < (0 - movement_threshold) and abs(moveX) < static_threshold:
+    # elif moveY < (0 - movement_threshold) and abs(moveX) < abs(moveY / 3):
         point_gestures[i].append("!down")
     # Check diagonals
     # elif 0.8 < abs(moveX/moveY) < 1.2 and abs(moveX) > movement_threshold:
@@ -175,10 +175,11 @@ def ProcessImage(frame):
     filtered = cv2.dilate(filtered, dilate_kernel, iterations=1)
     clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
     filtered = clahe.apply(filtered)
+    # th, filtered = cv2.threshold(filtered, 180, 255, cv2.THRESH_BINARY)
     # Background removal from mamacker's pi_to_potter
-    fgmask = fgbg.apply(filtered, learningRate=0.001)
-    filtered = cv2.bitwise_and(
-        filtered, filtered, mask=fgmask)
+    # fgmask = fgbg.apply(filtered, learningRate=0.001)
+    # filtered = cv2.bitwise_and(
+    #     filtered, filtered, mask=fgmask)
 
     return filtered
 
@@ -298,8 +299,7 @@ def TrackWand():
                 # save for debug
                 if config['debug_test_image']:
                     # save for Flask endpoint
-                    # _, img_encoded = cv2.imencode('.jpg', img)
-                    _, img_encoded = cv2.imencode('.jpg', frame_gray)
+                    _, img_encoded = cv2.imencode('.jpg', img)
                     store.set(f'{redis_ns}:image', pickle.dumps(img_encoded))
 
             if debug_opencv:
@@ -346,7 +346,7 @@ def WatchSpellsOn():
     """Start watching for spells."""
     LampState('on')
     # Light up for 5s to let the Wizard know you're ready
-    lumos(0)
+    lumos(0, (16,16,255), True)
     # track wand
     print("Begin Tracking Wand")
     TrackWand()

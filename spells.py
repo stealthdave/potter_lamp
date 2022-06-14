@@ -66,7 +66,7 @@ def lumos(lamp_duration=180, start_color=(255, 255, 255), direct_cast = False):
     set_lights_state(True)
     for val in range(0, 255, 4):
         # if someone casts "Nox", stop turning on lights
-        if not get_lights_state() or not check_current_spell('lumos'):
+        if not get_lights_state() or not check_current_spell('lumos') and not direct_cast:
             break
         color = (int(val * start_color[0] / 256),
                  int(val * start_color[1] / 256),
@@ -79,7 +79,7 @@ def lumos(lamp_duration=180, start_color=(255, 255, 255), direct_cast = False):
     time.sleep(lamp_duration)
 
     # If the lights are still on, run nox.
-    if get_lights_state() and check_current_spell('lumos'):
+    if get_lights_state() and (check_current_spell('lumos') or direct_cast):
         nox()
     print("lumos complete")
     return
