@@ -8,7 +8,7 @@ Adafruit-PlatformDetect==3.24.1
 Adafruit-PureIO==1.1.9
 cffi==1.15.0
 click==8.1.3
-Flask==2.1.2
+Flask==2.3.2
 idna==2.2
 importlib-metadata==4.11.4
 itsdangerous==2.1.2
