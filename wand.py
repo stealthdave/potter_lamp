@@ -77,9 +77,9 @@ lk_params = dict( winSize  = (25,25),
                   maxLevel = 10,
                   criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 dilation_params = (5, 5)
-movement_threshold = 15
+movement_threshold = 10
 static_threshold = 5
-scene_duration = 5
+scene_duration = 2.5
 rotate_camera = config['rotate_camera']
 # Background removal filter
 fgbg = cv2.createBackgroundSubtractorMOG2()
@@ -121,17 +121,17 @@ def IsGesture(newX,newY,oldX,oldY,i,ig):
     #look for basic movements - TODO: trained gestures
     moveX = newX - oldX
     moveY = newY - oldY
-    if moveX > movement_threshold and abs(moveY) < static_threshold:
-    # if moveX > movement_threshold and abs(moveY) < abs(moveX / 3):
+    # if moveX > movement_threshold and abs(moveY) < static_threshold:
+    if moveX > movement_threshold and abs(moveY) < abs(moveX / 2):
         point_gestures[i].append("!right")
-    elif moveX < (0 - movement_threshold) and abs(moveY) < static_threshold:
-    # elif moveX < (0 - movement_threshold) and abs(moveY) < abs(moveX / 3):
+    # elif moveX < (0 - movement_threshold) and abs(moveY) < static_threshold:
+    elif moveX < (0 - movement_threshold) and abs(moveY) < abs(moveX / 2):
         point_gestures[i].append("!left")
-    elif moveY > movement_threshold and abs(moveX) < static_threshold:
-    # elif moveY > movement_threshold and abs(moveX) < abs(moveY / 3):
+    # elif moveY > movement_threshold and abs(moveX) < static_threshold:
+    elif moveY > movement_threshold and abs(moveX) < abs(moveY / 2):
         point_gestures[i].append("!up")
-    elif moveY < (0 - movement_threshold) and abs(moveX) < static_threshold:
-    # elif moveY < (0 - movement_threshold) and abs(moveX) < abs(moveY / 3):
+    # elif moveY < (0 - movement_threshold) and abs(moveX) < static_threshold:
+    elif moveY < (0 - movement_threshold) and abs(moveX) < abs(moveY / 2):
         point_gestures[i].append("!down")
     # Check diagonals
     # elif 0.8 < abs(moveX/moveY) < 1.2 and abs(moveX) > movement_threshold:
@@ -175,11 +175,11 @@ def ProcessImage(frame):
     filtered = cv2.dilate(filtered, dilate_kernel, iterations=1)
     clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
     filtered = clahe.apply(filtered)
-    # th, filtered = cv2.threshold(filtered, 180, 255, cv2.THRESH_BINARY)
     # Background removal from mamacker's pi_to_potter
     # fgmask = fgbg.apply(filtered, learningRate=0.001)
     # filtered = cv2.bitwise_and(
     #     filtered, filtered, mask=fgmask)
+    # th, filtered = cv2.threshold(filtered, 180, 255, cv2.THRESH_BINARY)
 
     return filtered
 
@@ -245,7 +245,7 @@ def TrackWand():
         old_gray = ProcessImage(old_frame)
 
         # Take first frame and find circles in it
-        p0 = cv2.HoughCircles(old_gray,cv2.HOUGH_GRADIENT,3,50,param1=240,param2=8,minRadius=4,maxRadius=15)
+        p0 = cv2.HoughCircles(old_gray,cv2.HOUGH_GRADIENT,3,50,param1=240,param2=8,minRadius=4,maxRadius=10)
         if p0 is not None:
             p0.shape = (p0.shape[1], 1, p0.shape[2])
             p0 = p0[:,:,0:2]
