@@ -14,8 +14,8 @@ importlib-metadata==4.11.4
 itsdangerous==2.1.2
 Jinja2==3.1.2
 MarkupSafe==2.1.1
-numpy==1.22.4
-opencv-contrib-python==4.5.5.64
+numpy==1.24.1
+opencv-contrib-python==4.7.0.68
 Pillow==9.1.1
 pyasn1==0.1.9
 pycparser==2.20
